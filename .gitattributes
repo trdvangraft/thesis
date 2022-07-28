@@ -1,0 +1,11 @@
+*.csv filter=lfs diff=lfs merge=lfs -text
+**/data/** filter=lfs diff=lfs merge=lfs -text
+*.rds filter=lfs diff=lfs merge=lfs -text
+*.json filter=lfs diff=lfs merge=lfs -text
+data/** filter=lfs diff=lfs merge=lfs -text
+**/data/**/* filter=lfs diff=lfs merge=lfs -text
+data/**/* filter=lfs diff=lfs merge=lfs -text
+essential_genes/data/* filter=lfs diff=lfs merge=lfs -text
+essential_genes/data filter=lfs diff=lfs merge=lfs -text
+essential_genes/data/** filter=lfs diff=lfs merge=lfs -text
+essential_genes/expression_data filter=lfs diff=lfs merge=lfs -text
