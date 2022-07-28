@@ -1,0 +1,3 @@
+[submodule "essential_genes/tensorflow_gnn"]
+        path = essential_genes/tensorflow_gnn
+        url = https://github.com/tensorflow/gnn
