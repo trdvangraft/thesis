@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.tree import DecisionTreeClassifier
 
-from metaengineering.src.settings import DataOrientation
+from src.settings import DataOrientation
 
 
 class DataLoader:
@@ -28,28 +28,8 @@ class DataLoader:
 
         return LHS.reset_index().merge(RHS, left_on='KO_ORF', right_on='genotype').set_index('KO_ORF')
 
-    def get_simple(self, data: pd.DataFrame):
-        """
-        Orient the dataframe such that we have a list of features for each metabolites
-        If measurements are available for multiple metabolites given a genotype stack measurements
-
-        Parameters
-        ----------
-        data: pd.DataFrame
-            Input dataframe that needs to be transformed to simple task format
-        """
-        meta_names = self._get_metabolite_names
-        not_meta_names = data.columns[~data.columns.isin(
-            meta_names)].to_numpy()
-
-        result = data.melt(id_vars=not_meta_names, var_name='metabolite_id',
-                           value_name='metabolite_concentration', ignore_index=False)
-        result = result.dropna(0)
-
-        return result
-
-    @property
-    def _get_metabolite_names(self):
+    @staticmethod
+    def _get_metabolite_names():
         """
         We need to extract metabolite names from the raw metabolites table
         """
