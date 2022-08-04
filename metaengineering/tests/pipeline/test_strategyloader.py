@@ -1,9 +1,8 @@
 import unittest
 
-from metaengineering.src.dataloader import DataLoader
-from metaengineering.src.taskloader import TaskLoader
-from metaengineering.src.strategyloader import StrategyLoader
-
+from src.pipeline.dataloader import DataLoader
+from src.pipeline.taskloader import TaskLoader
+from src.pipeline.strategyloader import StrategyLoader
 
 import pandas as pd
 from pandas.testing import assert_frame_equal, assert_series_equal, assert_index_equal

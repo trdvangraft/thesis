@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import Mock, patch
-from metaengineering.src.settings import DataOrientation
+from src.settings import DataOrientation
 
-from src.dataloader import DataLoader
+from src.pipeline.dataloader import DataLoader
 
 import pandas as pd
 from pandas.testing import assert_frame_equal
@@ -15,7 +15,7 @@ class TestDataloader(unittest.TestCase):
         super().setUp()
         self.dataloader = DataLoader()
 
-    @patch('src.dataloader.pd.read_csv')
+    @patch('src.pipeline.dataloader.pd.read_csv')
     def test_dataloader_merges_correctly(self, mock_read_csv: Mock):
         def data_frame_return(path, delimiter):
             if 'metabolite' in path:

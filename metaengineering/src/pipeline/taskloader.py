@@ -1,6 +1,6 @@
 import pandas as pd
 
-from src.dataloader import DataLoader
+from .dataloader import DataLoader
 
 
 class TaskLoader:
