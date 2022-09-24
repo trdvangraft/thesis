@@ -1,13 +1,12 @@
 import unittest
 from unittest.mock import Mock, patch
-from src.settings import DataOrientation
-
-from src.pipeline.dataloader import DataLoader
 
 import pandas as pd
 from pandas.testing import assert_frame_equal
 
 import numpy as np
+
+from metaengineering.src.pipeline.dataloader import DataLoaderConfig, FrameFilters, DataLoader
 
 
 class TestDataloader(unittest.TestCase):
@@ -47,6 +46,30 @@ class TestDataloader(unittest.TestCase):
 
         self.assertTupleEqual(df.shape, (96, 726))
     
+    def test_precursor_metabolite_filtering(self):
+        config = DataLoaderConfig(
+            additional_filters=[self.dataloader.data_factory.filters.is_precursor]
+        )
+
+        print(config)
+        df = self.dataloader.get_dataframe(config)
+        self.assertTupleEqual(df.obs.shape, (96, 12))
+        self.assertListEqual(
+            df.obs.columns.to_list(), 
+            ['g6p;g6p-B', 'g6p;f6p;g6p-B', 'f6p', 'dhap', '3pg;2pg', 'pep', 'pyr', 'r5p', 'e4p', 'accoa', 'akg', 'oaa']
+        )
+    
+    def test_transformer_protein_logfc(self):
+        config = DataLoaderConfig(
+            additional_filters=[self.dataloader.data_factory.filters.is_precursor],
+            additional_transforms=[self.dataloader.data_factory.transformer.log_fold_change_protein]
+        )
+
+        df = self.dataloader.get_dataframe(config)
+        self.assertTupleEqual(df.obs.shape, (95, 12))
+        self.assertTupleEqual(df.X.shape, (95, 726))
+
+    
     def _data_frame_return(self, path, delimiter):
         if 'metabolite' in path:
             return pd.DataFrame(data={
@@ -72,4 +95,5 @@ class TestDataloader(unittest.TestCase):
                 'p.value_bonferroni': np.ones(4),
             })
         }
+
             
