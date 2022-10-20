@@ -1,4 +1,5 @@
 import unittest
+from metaengineering.src.pipeline.taskloader import TaskLoaderConfig
 from metaengineering.src.settings.strategy import Strategy
 from metaengineering.src.settings.tier import Tier
 
@@ -102,5 +103,14 @@ class TestTaskLoader(unittest.TestCase):
 
         number_of_frames = sum(1 for _ in gen)
         self.assertEqual(number_of_frames, 50)
+    
+    def test_data_throttle(self):
+        ann = self.dataloader.get_simple_protein_metabolite_dataframe()
+        print(ann.X.shape)
 
+        config = TaskLoaderConfig(data_throttle=.5)
+        gen = self.taskloader.prepare_task(ann, Tier.TIER0).build(Strategy.ALL, config)
+
+        tf = next(gen)
+        self.assertTupleEqual(tf.x.shape, (1021, 726))
 

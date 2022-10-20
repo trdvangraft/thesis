@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import reduce
 from typing import Callable, List
 import pandas as pd
@@ -11,8 +11,9 @@ from src.settings.strategy import Strategy
 
 from .dataloader import DataLoader
 
-class TaskTransforms:
-    pass
+@dataclass
+class TaskLoaderConfig:
+    data_throttle: int = 1.0
 
 @dataclass
 class TaskFrame:
@@ -43,17 +44,44 @@ class TaskLoader:
             self._ann_data_df = transform(self._ann_data_df)
         return self
     
-    def build(self, strategy: Strategy):
-        if strategy == strategy.ALL:
-            return self._get_model_full()
+    def build(self, 
+        strategy: Strategy,
+        config: TaskLoaderConfig = TaskLoaderConfig()
+    ):
+        return self._get_model(strategy, config)
+        
+    def _get_model(self, 
+        strategy: Strategy, 
+        config: TaskLoaderConfig
+    ):
+        df = self._get_prepared_frame()
+        df = self._throttle_dataframe(df, config.data_throttle)
+
+        if strategy == strategy.ALL:    
+            x, y = self._split_frame(df)
+            yield TaskFrame(x, y, Strategy.ALL, 'all')
         elif strategy == strategy.METABOLITE_CENTRIC:
-            return self._get_model_by_level(1, strategy)
+            level = 1
+            for v in df.index.unique(level):
+                _df = df.xs(v, level=level)
+                x, y = self._split_frame(_df)
+                yield TaskFrame(x, y, strategy, v)
+    
+    def _throttle_dataframe(self, 
+        df: pd.DataFrame, 
+        frac: int
+    ):
+        _df = df.groupby(by='metabolite_id', group_keys=False)
+        _df = _df.apply(lambda x: x.sample(frac=frac))
+        return _df
+
     
     def _get_model_by_level(self, level: int, strategy: Strategy):
         df: pd.DataFrame = self._get_prepared_frame()
 
         for v in df.index.unique(level):
-            x, y = self._split_frame(df.xs(v, level=level))
+            _df = df.xs(v, level=level)
+            x, y = self._split_frame(_df)
             yield TaskFrame(x, y, strategy, v)
     
     def _get_model_full(self):
