@@ -1,4 +1,3 @@
-from turtle import left
 import pandas as pd
 
 import seaborn as sns
