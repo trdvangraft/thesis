@@ -1,3 +1,4 @@
+from cmath import isnan
 from collections import defaultdict
 from typing import List
 
@@ -41,13 +42,18 @@ class TestResultStore:
         if len(X_test) < 2:
             return
 
-        self.results[f"{key}_{architecture}"].append(pearsonr(y_test, model.predict(X_test))[0])
+        correlation = pearsonr(y_test, model.predict(X_test))[0]
+
+        if np.isnan(correlation):
+            correlation = 0
+
+        self.results[f"{key}_{architecture}"].append(correlation)
         self.pred_results[f"{key}_{architecture}"].update({
             'y_true': y_test.values,
             'y_pred': model.predict(X_test),
             'architecture': architecture,
             'metabolite_id': key,
-            'correlation': pearsonr(y_test, model.predict(X_test))[0],
+            'correlation': correlation,
         })
 
     def to_file(self):

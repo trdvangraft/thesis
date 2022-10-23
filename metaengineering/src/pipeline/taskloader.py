@@ -59,14 +59,19 @@ class TaskLoader:
 
         if strategy == strategy.ALL:    
             x, y = self._split_frame(df)
-            yield TaskFrame(x, y, Strategy.ALL, 'all')
+            yield TaskFrame(x, y, strategy, 'all')
         elif strategy == strategy.METABOLITE_CENTRIC:
             level = 1
             for v in df.index.unique(level):
                 _df = df.xs(v, level=level)
                 x, y = self._split_frame(_df)
                 yield TaskFrame(x, y, strategy, v)
-    
+        elif strategy == strategy.ONE_VS_ALL:
+            level = 1
+            for v in df.index.unique(level):
+                x, y = self._split_frame(df)
+                yield TaskFrame(x, y, strategy, v)
+
     def _throttle_dataframe(self, 
         df: pd.DataFrame, 
         frac: int

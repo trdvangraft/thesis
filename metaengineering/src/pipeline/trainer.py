@@ -2,6 +2,7 @@ from typing import Any, Dict, List
 from dataclasses import dataclass
 
 from src.pipeline.taskloader import TaskLoader, TaskFrame, TaskLoaderConfig
+from src.settings.strategy import Strategy
 
 from src.utils.parsers.cv_parser import to_cv_params, parse_cv_result
 
@@ -21,9 +22,17 @@ class Trainer:
         tf: TaskFrame,
         test_size=0.3,
         shuffle=False,
-        stratify=None
+        stratify=None,
+        strategy: Strategy=Strategy.ALL
     ):
         df = tf.x.reset_index()
+
+        if strategy == strategy.ONE_VS_ALL:
+            metabolite_id = tf.frame_name
+            X_train, X_test = df[df['metabolite_id'] != metabolite_id], df[df['metabolite_id'] == metabolite_id]
+            y_train, y_test = tf.y[X_train.index], tf.y[X_test.index]
+            return X_train, X_test, y_train, y_test
+
         return train_test_split(
             df,
             tf.y,

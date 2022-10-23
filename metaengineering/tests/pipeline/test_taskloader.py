@@ -113,4 +113,11 @@ class TestTaskLoader(unittest.TestCase):
 
         tf = next(gen)
         self.assertTupleEqual(tf.x.shape, (1021, 726))
+    
+    def test_one_vs_all_strategy(self):
+        ann = self.dataloader.get_simple_protein_metabolite_dataframe()
+        gen = self.taskloader.prepare_task(ann, Tier.TIER0).build(Strategy.ONE_VS_ALL)
+
+        number_of_frames = sum(1 for _ in gen)
+        self.assertEqual(number_of_frames, 50)
 

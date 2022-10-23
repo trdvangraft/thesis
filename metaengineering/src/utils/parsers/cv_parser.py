@@ -76,16 +76,17 @@ def _cv_result_to_model(model: TransformedTargetRegressor, c_best_model: pd.Data
     return model
 
 def fmt_cv_results(df: pd.DataFrame):
-    df = _fmt_regressor(df)
-    df['params_fmt'] = df.apply(_fmt_param, axis=1)    
-    df.columns = df.columns.map(lambda name: _rename(name))
-    df['mean'] = -1 * df['mean']
-    df['std'] = -1 * df['std']
+    _df = df.copy()
+    _df = _fmt_regressor(_df)
+    _df['params_fmt'] = _df.apply(_fmt_param, axis=1)    
+    _df.columns = _df.columns.map(lambda name: _rename(name))
+    _df['mean'] = -1 * _df['mean']
+    _df['std'] = -1 * _df['std']
 
-    df = df[df['params_fmt'] != "-"]
+    _df = _df[_df['params_fmt'] != "-"]
     # filter depth none 
-    df = df[(df['regressor'] == 'DecisionTreeRegressor()') & (df['regressor__max_depth'] > 0) | (df['regressor'] != 'DecisionTreeRegressor()')]
-    return df
+    _df = _df[(_df['regressor'] == 'DecisionTreeRegressor()') & (_df['regressor__max_depth'] > 0) | (_df['regressor'] != 'DecisionTreeRegressor()')]
+    return _df
 
 def _fmt_param(param: pd.DataFrame):
     series = param[param.index.str.startswith('param_')].dropna()
@@ -93,10 +94,11 @@ def _fmt_param(param: pd.DataFrame):
     return '\n'.join(result)
 
 def _fmt_regressor(df: pd.DataFrame):
-    df['param_regressor__regressor'] = df['param_regressor__regressor'].replace(to_replace=r'^DecisionTreeRegressor.*', value="DecisionTreeRegressor()", regex=True)
-    df['param_regressor__regressor'] = df['param_regressor__regressor'].replace(to_replace=r'^ElasticNet.*', value="ElasticNet()", regex=True)
-    df['param_regressor__regressor'] = df['param_regressor__regressor'].replace(to_replace=r'^SVR.*', value="SVR()", regex=True)
-    return df
+    _df = df.copy()
+    _df['param_regressor__regressor'] = _df['param_regressor__regressor'].replace(to_replace=r'^DecisionTreeRegressor.*', value="DecisionTreeRegressor()", regex=True)
+    _df['param_regressor__regressor'] = _df['param_regressor__regressor'].replace(to_replace=r'^ElasticNet.*', value="ElasticNet()", regex=True)
+    _df['param_regressor__regressor'] = _df['param_regressor__regressor'].replace(to_replace=r'^SVR.*', value="SVR()", regex=True)
+    return _df
 
 def _rename(name: str):
     name = name.removeprefix('param_regressor__')
