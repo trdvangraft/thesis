@@ -49,8 +49,12 @@ class DataFactory:
         )
 
         if self.frame_cache.contains('protein_expression'):
-            for key, item in self.frame_cache.get_frame('protein_expression', default={}).get_all_frames():
+            for key, item in self.frame_cache.get_frame('protein_expression').get_all_frames():
                 self.current_frame.varm[key] = item
+
+        if self.frame_cache.contains('ppi'):
+            ppi = self.frame_cache.get_frame('ppi')
+            self.current_frame.uns['ppi'] = ppi
 
         df = self.current_frame.copy()
         self.current_frame = None

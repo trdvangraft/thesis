@@ -2,11 +2,10 @@ import unittest
 from unittest.mock import Mock, patch
 
 import pandas as pd
-from pandas.testing import assert_frame_equal
 
 import numpy as np
 
-from metaengineering.src.pipeline.dataloader import DataLoaderConfig, FrameFilters, DataLoader
+from metaengineering.src.pipeline.dataloader import DataLoader, DataLoaderConfig
 
 
 class TestDataloader(unittest.TestCase):
@@ -68,6 +67,43 @@ class TestDataloader(unittest.TestCase):
         df = self.dataloader.get_dataframe(config)
         self.assertTupleEqual(df.obs.shape, (95, 12))
         self.assertTupleEqual(df.X.shape, (95, 726))
+    
+    def test_ppi_network(self):
+        config = DataLoaderConfig(
+            additional_frames=[
+                self.dataloader.data_factory.loaders.interaction_frame,
+            ],
+            additional_filters=[
+                self.dataloader.data_factory.filters.is_precursor
+            ],
+            additional_transforms=[
+                self.dataloader.data_factory.transformer.log_fold_change_protein,
+                self.dataloader.data_factory.transformer.ppi_coo_matrix,
+            ]
+        )
+
+        df = self.dataloader.get_dataframe(config)
+        self.assertTupleEqual(df.obs.shape, (95, 12))
+        self.assertTupleEqual(df.varp['ppi'].shape, (704, 704))
+    
+    def test_ppi_network_filter(self):
+        config = DataLoaderConfig(
+            additional_frames=[
+                self.dataloader.data_factory.loaders.interaction_frame,
+            ],
+            additional_filters=[
+                self.dataloader.data_factory.filters.is_precursor,
+                self.dataloader.data_factory.filters.has_at_least_n_interaction,
+            ],
+            additional_transforms=[
+                self.dataloader.data_factory.transformer.log_fold_change_protein,
+                self.dataloader.data_factory.transformer.ppi_coo_matrix,
+            ]
+        )
+
+        df = self.dataloader.get_dataframe(config)
+        self.assertTupleEqual(df.obs.shape, (95, 12))
+        self.assertTupleEqual(df.varp['ppi'].shape, (410, 410))
 
     
     def _data_frame_return(self, path, delimiter):

@@ -1,4 +1,5 @@
 import unittest
+from metaengineering.src.pipeline.dataloader import DataLoaderConfig
 from metaengineering.src.pipeline.taskloader import TaskLoaderConfig
 from metaengineering.src.settings.strategy import Strategy
 from metaengineering.src.settings.tier import Tier
@@ -7,7 +8,6 @@ from src.pipeline.dataloader import DataLoader
 from src.pipeline.taskloader import TaskFrame, TaskLoader
 
 import pandas as pd
-from pandas.testing import assert_frame_equal
 
 import numpy as np
 from anndata import AnnData
@@ -17,7 +17,7 @@ class TestTaskLoader(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
         self.dataloader = DataLoader()
-        self.taskloader = TaskLoader()
+        self.taskloader: TaskLoader = TaskLoader()
 
     def test_formats_taskframes_correctly(self):
         data = pd.DataFrame(data=np.arange(6).reshape((2, 3)), index=['GENOTYPE_1', 'GENOTYPE_2'], columns=[
@@ -120,4 +120,28 @@ class TestTaskLoader(unittest.TestCase):
 
         number_of_frames = sum(1 for _ in gen)
         self.assertEqual(number_of_frames, 50)
+    
+    def test_all_tier_one(self):
+        config = DataLoaderConfig(
+            additional_frames=[
+                self.dataloader.data_factory.loaders.interaction_frame,
+            ],
+            additional_filters=[
+                self.dataloader.data_factory.filters.is_precursor,
+                self.dataloader.data_factory.filters.has_at_least_n_interaction,
+            ],
+            additional_transforms=[
+                self.dataloader.data_factory.transformer.log_fold_change_protein,
+                self.dataloader.data_factory.transformer.ppi_coo_matrix,
+            ]
+        )
+
+        ann: AnnData = self.dataloader.get_dataframe(config)
+        gen = self.taskloader.prepare_task(ann, Tier.TIER1).build(Strategy.ALL)
+
+        frames = [frame for frame in gen]
+        self.assertEqual(len(frames), 1)
+
+        
+
 

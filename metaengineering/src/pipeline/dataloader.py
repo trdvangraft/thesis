@@ -27,7 +27,6 @@ class DataLoader:
         Averages the repeated experiments of the raw protein dataset
         """
         df = self.data_factory
-        print(config)
 
         return df \
             .load(frames=[

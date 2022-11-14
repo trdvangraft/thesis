@@ -9,6 +9,7 @@ from sklearn.compose import make_column_transformer, TransformedTargetRegressor
 from sklearn.tree import DecisionTreeRegressor, plot_tree
 from sklearn.svm import SVR
 from sklearn.linear_model import ElasticNet
+from sklearn.ensemble import RandomForestRegressor
 
 from sklearn.metrics import mean_absolute_error
 
@@ -70,8 +71,15 @@ def _cv_result_to_model(model: TransformedTargetRegressor, c_best_model: pd.Data
             regressor=ElasticNet(),
             regressor__l1_ratio=c_best_model[f'{prefix}regressor__l1_ratio'].values[0],
         )
+    elif all(c_best_model[f'{prefix}regressor'].str.contains('RandomForestRegressor')):
+        print('RandomForest model')
+        model.regressor.set_params(
+            regressor=RandomForestRegressor(),
+            regressor__criterion=c_best_model[f'{prefix}regressor__criterion'].values[0],
+            regressor__max_depth=None if math.isnan(r := c_best_model[f'{prefix}regressor__max_depth'].values[0]) else int(r)
+        )
     else:
-        raise NotImplementedError()
+        raise NotImplementedError(c_best_model[f'{prefix}regressor'])
 
     return model
 
@@ -98,6 +106,7 @@ def _fmt_regressor(df: pd.DataFrame):
     _df['param_regressor__regressor'] = _df['param_regressor__regressor'].replace(to_replace=r'^DecisionTreeRegressor.*', value="DecisionTreeRegressor()", regex=True)
     _df['param_regressor__regressor'] = _df['param_regressor__regressor'].replace(to_replace=r'^ElasticNet.*', value="ElasticNet()", regex=True)
     _df['param_regressor__regressor'] = _df['param_regressor__regressor'].replace(to_replace=r'^SVR.*', value="SVR()", regex=True)
+    _df['param_regressor__regressor'] = _df['param_regressor__regressor'].replace(to_replace=r'^RandomForestRegressor.*', value="RandomForestRegressor()", regex=True)
     return _df
 
 def _rename(name: str):

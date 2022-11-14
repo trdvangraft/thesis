@@ -24,7 +24,7 @@ class FrameLoaders:
         return self
     
     def interaction_frame(self):
-        self.frame_cache.insert_frame('ppi', self._load_json(f'{self.root_dir}tsv_records'))
+        self.frame_cache.insert_frame('ppi', self._load_json(f'{self.root_dir}tsv_records.json'))
         return self
     
     def go_frame(self):

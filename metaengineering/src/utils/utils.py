@@ -2,12 +2,28 @@ from cmath import isnan
 from collections import defaultdict
 from typing import List
 
-import pandas as pd
 import numpy as np
-
-from sklearn.compose import TransformedTargetRegressor
-
+import pandas as pd
 from scipy.stats import pearsonr
+
+from src.pipeline.dataloader import DataLoaderConfig, DataLoader
+from src.pipeline.taskloader import TaskLoaderConfig, TaskLoader, TaskFrame
+
+from src.settings.strategy import Strategy
+from src.settings.tier import Tier
+
+from sklearn.preprocessing import OneHotEncoder, StandardScaler, MinMaxScaler, RobustScaler, OrdinalEncoder
+from sklearn.compose import make_column_transformer, ColumnTransformer, TransformedTargetRegressor
+from sklearn.pipeline import Pipeline
+
+from sklearn.model_selection import train_test_split, GridSearchCV, RepeatedKFold, cross_val_score
+from sklearn.feature_selection import RFE
+from sklearn.decomposition import PCA
+
+from sklearn.tree import DecisionTreeRegressor, plot_tree
+from sklearn.svm import SVR
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import ElasticNet, GammaRegressor
 
 
 def gather_results(paths: List[str]):
@@ -18,6 +34,52 @@ def gather_results(paths: List[str]):
     ])
     return df
 
+def get_generator(
+    dl: DataLoader,
+    tl: TaskLoader,
+    strategy:Strategy=Strategy.METABOLITE_CENTRIC,
+    tier=Tier.TIER1,
+    data_config: DataLoaderConfig = DataLoaderConfig(),
+    task_config: TaskLoaderConfig = TaskLoaderConfig()
+):
+    df = dl.get_dataframe(data_config)
+    gen = tl.prepare_task(df, tier, task_config).build(strategy)
+    return gen
+
+def build_model_pipeline(
+    tf: TaskFrame = None,
+):
+    numeric_features = ['enzyme_concentration'] + tf.x.columns.to_list()
+    numeric_features = list(filter(lambda x: x in tf.x.columns.to_list(), numeric_features))
+    numeric_transformer = Pipeline(
+        steps=[
+            ('scaler', StandardScaler())
+        ]
+    )
+
+    prepocessor = ColumnTransformer(
+        transformers=[
+            ('num', numeric_transformer, numeric_features),
+            # ('cat', categorical_transformer, cat_features),
+        ],
+        remainder='drop'
+    )
+
+    estimator = DecisionTreeRegressor()
+
+    clf = Pipeline(
+        steps=[
+            ('preprocessor', prepocessor),
+            # ('pca', PCA()),
+            ('regressor', estimator),
+        ]
+    )
+
+    model = TransformedTargetRegressor(
+        regressor=clf,
+        transformer=None,
+    )
+    return model
 
 class TestResultStore:
     def __init__(

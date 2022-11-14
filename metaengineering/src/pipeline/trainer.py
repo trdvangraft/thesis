@@ -55,7 +55,7 @@ class Trainer:
         print(f"{tf.x.shape=} {tf.y.shape}")
         print(search_kwargs)
 
-        X_train, X_test, y_train, y_test = self.do_train_test_split(tf, **split_kwargs)
+        X_train, _, y_train, _ = self.do_train_test_split(tf, **split_kwargs)
 
         search = GridSearchCV(
             model,

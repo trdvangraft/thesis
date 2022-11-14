@@ -12,12 +12,17 @@ class FrameFilters:
     def is_in_genotype(self):
         for key, cf in self.frame_cache.get_all_frames():
             if type(cf) == pd.DataFrame:
-                _df = cf[cf.index.get_level_values('KO_ORF').isin(self.frame_cache.get_frame('metabolites').index)]
-                self.frame_cache.update_frame(key, _df)
+                self._is_in_genotype(key, cf)
             elif type(cf) == dict:
                 for key1, cf1 in cf.items():
-                    _df = cf1[cf1.index.get_level_values('KO_ORF').isin(self.frame_cache.get_frame('metabolites').index)]
-                    self.frame_cache.update_frame(key1, _df)
+                    self._is_in_genotype(key1, cf1)
+    
+    def _is_in_genotype(self, key: str, cf: pd.DataFrame):
+        if 'KO_ORF' not in cf.index.names:
+            return
+
+        _df = cf[cf.index.get_level_values('KO_ORF').isin(self.frame_cache.get_frame('metabolites').index)]
+        self.frame_cache.update_frame(key, _df)
 
     def is_precursor(self):
         precursor_metabolite_ids = [
@@ -28,3 +33,14 @@ class FrameFilters:
         obs = self.frame_cache.get_frame('metabolites')
         obs = obs[precursor_metabolite_ids]
         self.frame_cache.update_frame('metabolites', obs)
+    
+    def has_at_least_n_interaction(self):
+        # TODO: we need to encode this into a parameter
+        n = 7 
+        # Assume that the transformation to the adj matrix worked out
+        cf = self.frame_cache.get_frame('ppi')
+        # sum over all the rows
+        cf = cf.loc[cf.sum(axis=1) > n]
+        assert cf.sum(axis=1).min() > n
+        self.frame_cache.update_frame('ppi', cf)
+        
