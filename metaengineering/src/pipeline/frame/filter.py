@@ -1,5 +1,7 @@
 from src.pipeline.frame.cache import FrameCache
 
+from typing import List
+
 import pandas as pd
 
 
@@ -16,13 +18,6 @@ class FrameFilters:
             elif type(cf) == dict:
                 for key1, cf1 in cf.items():
                     self._is_in_genotype(key1, cf1)
-    
-    def _is_in_genotype(self, key: str, cf: pd.DataFrame):
-        if 'KO_ORF' not in cf.index.names:
-            return
-
-        _df = cf[cf.index.get_level_values('KO_ORF').isin(self.frame_cache.get_frame('metabolites').index)]
-        self.frame_cache.update_frame(key, _df)
 
     def is_precursor(self):
         precursor_metabolite_ids = [
@@ -34,6 +29,14 @@ class FrameFilters:
         obs = obs[precursor_metabolite_ids]
         self.frame_cache.update_frame('metabolites', obs)
     
+    def parse_config(self, function_names: List[str]):
+        string_to_function = {
+            "is_precursor": self.is_precursor,
+            "has_at_least_n_interaction": self.has_at_least_n_interaction,
+            "is_in_genotype": self.is_in_genotype,
+        }
+        return [string_to_function.get(function_name) for function_name in function_names]
+    
     def has_at_least_n_interaction(self):
         # TODO: we need to encode this into a parameter
         n = 7 
@@ -43,4 +46,11 @@ class FrameFilters:
         cf = cf.loc[cf.sum(axis=1) > n]
         assert cf.sum(axis=1).min() > n
         self.frame_cache.update_frame('ppi', cf)
+    
+    def _is_in_genotype(self, key: str, cf: pd.DataFrame):
+        if 'KO_ORF' not in cf.index.names:
+            return
+
+        _df = cf[cf.index.get_level_values('KO_ORF').isin(self.frame_cache.get_frame('metabolites').index)]
+        self.frame_cache.update_frame(key, _df)
         

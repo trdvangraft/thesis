@@ -1,4 +1,5 @@
 from io import StringIO
+from typing import List
 from src.pipeline.frame.cache import FrameCache
 
 import numpy as np
@@ -50,6 +51,16 @@ class FrameTransformers:
         _df = pd.concat(_df['interaction_network'].values)
         _df = self._ppi_coo_matrix(_df)
         self.frame_cache.update_frame('ppi', _df)
+
+    def parse_config(self, function_names: List[str]):
+        string_to_function = {
+            "ppi_coo_matrix": self.ppi_coo_matrix,
+            "protein_expression": self.protein_expression,
+            "log_fold_change_protein": self.log_fold_change_protein,
+            "metabolites": self.metabolites,
+            "proteins": self.proteins
+        }
+        return [string_to_function.get(function_name) for function_name in function_names]
     
     def _ppi_coo_matrix(self, df):
         def get_idx(name: str) -> np.array:

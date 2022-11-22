@@ -7,9 +7,9 @@ from anndata import AnnData
 from src.settings.tier import Tier
 from src.settings.strategy import Strategy
 
-@dataclass
-class TaskLoaderConfig:
-    data_throttle: int = 1.0
+from src.pipeline.config import TaskLoaderConfig
+
+
 
 @dataclass
 class TaskFrame:
@@ -28,14 +28,16 @@ class TaskLoader:
 
     def __init__(self) -> None:
         self._ann_data_df = None
+        self.tl_config = None
+
+    def prepare_taskloader(self, config: TaskLoaderConfig):
+        self.tl_config = config
 
     def prepare_task(self, 
         df: AnnData, 
-        data_tier: Tier, 
-        config: TaskLoaderConfig = TaskLoaderConfig()
     ):
         self._ann_data_df = df
-        self._build_prepared_frame(data_tier, config)
+        self._build_prepared_frame(self.tl_config)
         return self
     
     def build(self, 
@@ -82,7 +84,6 @@ class TaskLoader:
             yield TaskFrame(x, y, strategy, v)
     
     def _build_prepared_frame(self, 
-        data_tier: Tier,
         config: TaskLoaderConfig,
     ):
         # we will stack the data along the index
@@ -92,14 +93,14 @@ class TaskLoader:
         x = data.to_df()
         y = data.obs
 
-        if data_tier.value == Tier.TIER0.value:
+        if config.tier.value == Tier.TIER0.value:
             df = self._build_prepared_base_frame(x, y)
             df = self._throttle_dataframe(df, config.data_throttle)
-        elif data_tier.value == Tier.TIER1.value:
+        elif config.tier.value == Tier.TIER1.value:
             # TODO we need to generalize the adjancy matrix
             adj_matrix = data.uns['ppi']
             df = self._build_graph_base_frame(x, y, adj_matrix)
-        elif data_tier.value == Tier.TIER2.value:
+        elif config.tier.value == Tier.TIER2.value:
             df = self._build_graph_base_frame(x, y)
 
         data.uns['prepared_data'] = df

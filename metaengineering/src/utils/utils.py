@@ -1,13 +1,16 @@
-from cmath import isnan
+import os
 from collections import defaultdict
 from typing import List
 
 import numpy as np
 import pandas as pd
+from pathlib import Path
 from scipy.stats import pearsonr
 
-from src.pipeline.dataloader import DataLoaderConfig, DataLoader
-from src.pipeline.taskloader import TaskLoaderConfig, TaskLoader, TaskFrame
+from src.pipeline.dataloader import DataLoader
+from src.pipeline.taskloader import TaskLoader, TaskFrame
+from src.pipeline.config import DataLoaderConfig, TaskLoaderConfig
+from src.orchestrator.config import ExplanationConfig, RunConfig
 
 from src.settings.strategy import Strategy
 from src.settings.tier import Tier
@@ -37,13 +40,11 @@ def gather_results(paths: List[str]):
 def get_generator(
     dl: DataLoader,
     tl: TaskLoader,
-    strategy:Strategy=Strategy.METABOLITE_CENTRIC,
-    tier=Tier.TIER1,
-    data_config: DataLoaderConfig = DataLoaderConfig(),
-    task_config: TaskLoaderConfig = TaskLoaderConfig()
+    strategy: Strategy,
+    tier: Tier
 ):
-    df = dl.get_dataframe(data_config)
-    gen = tl.prepare_task(df, tier, task_config).build(strategy)
+    df = dl.get_dataframe()
+    gen = tl.prepare_task(df).build(strategy)
     return gen
 
 def build_model_pipeline(
@@ -80,6 +81,46 @@ def build_model_pipeline(
         transformer=None,
     )
     return model
+
+def build_config(
+    strategy: Strategy,
+    tier: Tier,
+    params,
+    additional_frames=[],
+    additional_filters=[],
+    additional_transforms=[],
+    forced_training=False,
+    forced_testing=False, 
+    data_throttle=1,
+):
+    dl_config = DataLoaderConfig(
+        additional_frames=additional_frames,
+        additional_filters=additional_filters,
+        additional_transforms=additional_transforms,
+    )
+
+    tl_config = TaskLoaderConfig(
+        data_throttle=data_throttle,
+        tier=tier
+    )
+
+    run_config = RunConfig(
+        experiment_id=str(tier),
+        tier=tier,
+        strategy=strategy,
+        grid_search_params=params,
+        forced_training=forced_training,
+        forced_testing=forced_testing,
+    )
+
+    exp_config = ExplanationConfig(
+        experiment_id=str(tier)
+    )
+
+    return dl_config, tl_config, run_config, exp_config
+
+def get_project_root():
+    return Path(__file__).parent.parent.parent
 
 class TestResultStore:
     def __init__(
@@ -121,3 +162,6 @@ class TestResultStore:
     def to_file(self):
         pd.DataFrame.from_dict(self.results).to_csv(f'{self.experiment_path}/best_model_performance_{self.strategy}.csv')
         pd.DataFrame.from_dict(self.pred_results).to_json(f'{self.experiment_path}/best_model_prediction_performance_{self.strategy}.json')
+    
+    def check_if_result_exists(self):
+        return os.path.exists(f'{self.experiment_path}/best_model_performance_{self.strategy}.csv')

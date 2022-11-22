@@ -1,4 +1,4 @@
-from typing import OrderedDict
+from typing import OrderedDict, List
 
 from src.pipeline.frame.cache import FrameCache
 
@@ -34,6 +34,16 @@ class FrameLoaders:
     def exp_metadata_frame(self):
         self.frame_cache.insert_frame('exp_data', self._load_r(f'{self.root_dir}/exp_metadata._clean_.RData'))
         return self
+    
+    def parse_config(self, function_names: List[str]):
+        string_to_function = {
+            "exp_metadata_frame": self.exp_metadata_frame,
+            "go_frame": self.go_frame,
+            "interaction_frame": self.interaction_frame,
+            "protein_expression_frame": self.protein_expression_frame,
+            "basic_frame": self.basic_frame
+        }
+        return [string_to_function.get(function_name) for function_name in function_names]
     
     def _load_csv(self, path: str) -> pd.DataFrame:
         return pd.read_csv(path, delimiter='\t')

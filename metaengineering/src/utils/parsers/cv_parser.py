@@ -75,6 +75,7 @@ def _cv_result_to_model(model: TransformedTargetRegressor, c_best_model: pd.Data
         print('RandomForest model')
         model.regressor.set_params(
             regressor=RandomForestRegressor(),
+            regressor__n_estimators=int(c_best_model[f'{prefix}regressor__n_estimators'].values[0]),
             regressor__criterion=c_best_model[f'{prefix}regressor__criterion'].values[0],
             regressor__max_depth=None if math.isnan(r := c_best_model[f'{prefix}regressor__max_depth'].values[0]) else int(r)
         )
@@ -96,6 +97,9 @@ def fmt_cv_results(df: pd.DataFrame):
     _df = _df[(_df['regressor'] == 'DecisionTreeRegressor()') & (_df['regressor__max_depth'] > 0) | (_df['regressor'] != 'DecisionTreeRegressor()')]
     return _df
 
+def get_architectures(df: pd.DataFrame):
+    return ['all'] + df['param_regressor__regressor'].unique().tolist()
+
 def _fmt_param(param: pd.DataFrame):
     series = param[param.index.str.startswith('param_')].dropna()
     result = [f"{name.rsplit('__', 1)[1]}: {value}" for name, value in zip(series.index, series.values)]
@@ -114,4 +118,4 @@ def _rename(name: str):
     name = name.removesuffix('_test_score')
     return name
 
-    
+

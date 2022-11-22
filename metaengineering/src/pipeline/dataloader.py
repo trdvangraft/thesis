@@ -3,22 +3,24 @@ from typing import List
 import pandas as pd
 
 from src.pipeline.datafactory import DataFactory
+from src.pipeline.config import DataLoaderConfig, ParsedDataLoaderConfig
 
-@dataclass
-class DataLoaderConfig:
-    additional_frames: List = field(default_factory=list)
-    additional_transforms: List = field(default_factory=list)
-    additional_filters: List = field(default_factory=list)
     
 class DataLoader:
     DATA_FOLDER = './metaengineering/data/training/'
 
     def __init__(self) -> None:
         self.data_factory = DataFactory(DataLoader.DATA_FOLDER)
+        self.dl_config: DataLoaderConfig = None
+    
+    def prepare_dataloader(
+        self,
+        config: DataLoaderConfig
+    ):
+        self.dl_config = config
 
     def get_dataframe(
         self,
-        config: DataLoaderConfig = DataLoaderConfig()
     ):
         """
         This dataframe is the simplest way for predicting the metabolite concentrations
@@ -27,20 +29,21 @@ class DataLoader:
         Averages the repeated experiments of the raw protein dataset
         """
         df = self.data_factory
+        parsed_config = df.parse_config(self.dl_config)
 
         return df \
             .load(frames=[
                     df.loaders.basic_frame
-                ] + config.additional_frames
+                ] + parsed_config.additional_frames
             ) \
             .transform(transforms=[
                     df.transformer.metabolites,
                     df.transformer.proteins
-                ] + config.additional_transforms
+                ] + parsed_config.additional_transforms
             ) \
             .filter(filters=[
                     df.filters.is_in_genotype
-                ] + config.additional_filters
+                ] + parsed_config.additional_filters
             ) \
             .build()
 
@@ -89,6 +92,9 @@ class DataLoader:
         )
 
         return self.get_dataframe(config)
+
+    def parse_config(self):
+        pass
 
     @staticmethod
     def _get_metabolite_names():

@@ -1,11 +1,10 @@
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
+from dataclasses import dataclass
 
-from src.pipeline.taskloader import TaskLoader, TaskFrame, TaskLoaderConfig
+from src.pipeline.taskloader import TaskFrame
 from src.settings.strategy import Strategy
 
 from src.utils.parsers.cv_parser import to_cv_params, parse_cv_result
-
-import pandas as pd
 
 from scipy.stats import pearsonr
 
@@ -16,6 +15,8 @@ from sklearn.model_selection import train_test_split, GridSearchCV, RepeatedKFol
 from sklearn.feature_selection import RFE
 from sklearn.decomposition import PCA
 
+import pandas as pd
+
 class Trainer:
     def do_train_test_split(
         self,
@@ -24,7 +25,7 @@ class Trainer:
         shuffle=False,
         stratify=None,
         strategy: Strategy=Strategy.ALL
-    ):
+    ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         df = tf.x.reset_index()
 
         if strategy == strategy.ONE_VS_ALL:

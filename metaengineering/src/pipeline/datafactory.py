@@ -1,6 +1,7 @@
 from typing import List, Callable
 
 from anndata import AnnData
+from src.pipeline.config import ParsedDataLoaderConfig, DataLoaderConfig
 
 from src.pipeline.frame.cache import FrameCache
 from src.pipeline.frame.transformer import FrameTransformers
@@ -25,6 +26,13 @@ class DataFactory:
     @property
     def filters(self):
         return self._filters
+    
+    def parse_config(self, config: DataLoaderConfig) -> ParsedDataLoaderConfig:
+        return ParsedDataLoaderConfig(
+            additional_filters=self.filters.parse_config(config.additional_filters),
+            additional_frames=self.loaders.parse_config(config.additional_frames),
+            additional_transforms=self.transformer.parse_config(config.additional_transforms)
+        )
 
     def load(self, frames: List[Callable]):
         for frame_loader in frames:
