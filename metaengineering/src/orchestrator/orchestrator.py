@@ -1,3 +1,6 @@
+from src.orchestrator.explainer import Explainer
+from src.orchestrator.test_runner import TestRunner
+from src.orchestrator.train_runner import TrainRunner
 from src.settings.strategy import Strategy
 
 from src.pipeline.dataloader import DataLoader
@@ -36,10 +39,15 @@ class Orchestrator:
         tl = TaskLoader()
         tl.prepare_taskloader(self.tl_config)
 
-        runner = Runner(dl, tl)
-        runner.prepare_run(self.run_config)
-        runner.run_training()
-        runner.run_testing()
+        TrainRunner(dl, tl).prepare_run(self.run_config).run_training()
+        TestRunner(dl, tl).prepare_run(self.run_config).run_testing()
+
+        explainer = Explainer(dl, tl)
+        explainer.prepare_explainer(self.explain_config)
+        explainer.run()
+
+
+
 
 
         

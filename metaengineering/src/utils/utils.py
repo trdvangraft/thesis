@@ -114,13 +114,19 @@ def build_config(
     )
 
     exp_config = ExplanationConfig(
-        experiment_id=str(tier)
+        experiment_id=str(tier),
+        tier=tier,
+        strategy=strategy
     )
 
     return dl_config, tl_config, run_config, exp_config
 
 def get_project_root():
     return Path(__file__).parent.parent.parent
+
+def make_path_if_not_exists(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
 
 class TestResultStore:
     def __init__(

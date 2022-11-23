@@ -28,3 +28,7 @@ class RunConfig:
 @dataclass
 class ExplanationConfig:
     experiment_id: str
+    tier: Tier
+    strategy: Strategy
+    forced_lime: bool = False
+    forced_shap: bool = False

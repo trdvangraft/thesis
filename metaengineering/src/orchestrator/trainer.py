@@ -21,10 +21,10 @@ class Trainer:
     def do_train_test_split(
         self,
         tf: TaskFrame,
+        strategy: Strategy,
         test_size=0.3,
         shuffle=False,
         stratify=None,
-        strategy: Strategy=Strategy.ALL
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         df = tf.x.reset_index()
 
@@ -45,7 +45,8 @@ class Trainer:
 
     def do_grid_search(
         self,
-        tf: TaskFrame, 
+        tf: TaskFrame,
+        strategy: Strategy, 
         model: TransformedTargetRegressor, 
         params: List[Dict], 
         cv, 
@@ -56,7 +57,7 @@ class Trainer:
         print(f"{tf.x.shape=} {tf.y.shape}")
         print(search_kwargs)
 
-        X_train, _, y_train, _ = self.do_train_test_split(tf, **split_kwargs)
+        X_train, _, y_train, _ = self.do_train_test_split(tf, strategy, **split_kwargs)
 
         search = GridSearchCV(
             model,
@@ -70,9 +71,10 @@ class Trainer:
     def do_retrain_model(
         self,
         tf: TaskFrame, 
+        strategy: Strategy,
         model: TransformedTargetRegressor, 
         split_kwargs: Dict
     ):
-        X_train, X_test, y_train, y_test = self.do_train_test_split(tf, **split_kwargs)
+        X_train, X_test, y_train, y_test = self.do_train_test_split(tf, strategy, **split_kwargs)
         model.fit(X_train, y_train)
         return model
