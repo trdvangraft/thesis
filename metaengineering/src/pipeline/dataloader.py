@@ -11,7 +11,7 @@ class DataLoader:
 
     def __init__(self) -> None:
         self.data_factory = DataFactory(DataLoader.DATA_FOLDER)
-        self.dl_config: DataLoaderConfig = None
+        self.dl_config: DataLoaderConfig = DataLoaderConfig()
     
     def prepare_dataloader(
         self,
@@ -92,9 +92,6 @@ class DataLoader:
         )
 
         return self.get_dataframe(config)
-
-    def parse_config(self):
-        pass
 
     @staticmethod
     def _get_metabolite_names():
