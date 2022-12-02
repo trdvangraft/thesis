@@ -6,7 +6,7 @@ from pandas.testing import assert_frame_equal
 
 import numpy as np
 
-from metaengineering.src.utils.parsers.cv_parser import fmt_cv_results
+from metaengineering.src.parsers.cv_parser import fmt_cv_results
 
 class TestCVParser(unittest.TestCase):
     def setUp(self) -> None:

@@ -1,8 +1,8 @@
 from src.orchestrator.runner import Runner
 from src.settings.strategy import Strategy
 
-from src.utils.parsers.cv_parser import _fmt_regressor, get_architectures, parse_cv_result
-from src.utils.utils import TestResultStore
+from src.parsers.cv_parser import _fmt_regressor, get_architectures, parse_cv_result
+from src.utils.test_result_store import TestResultStore
 
 from src.pipeline.taskloader import TaskLoader
 from src.pipeline.dataloader import DataLoader
@@ -61,7 +61,11 @@ class TestRunner(Runner):
     
     def _run_testing(self, results_df, split_kwargs):
         architectures = get_architectures(results_df)
-        testResultStore = TestResultStore(self._get_experiment_path(), self.current_run_config.strategy)
+        testResultStore = TestResultStore(
+            self._get_experiment_path(), 
+            self.current_run_config.strategy,
+            'sklearn'
+        )
 
         if not os.path.exists(f'{self._get_model_path()}'):
             print(f"{self._get_model_path()=}")
@@ -86,14 +90,14 @@ class TestRunner(Runner):
 
                 if self.current_run_config.strategy == Strategy.ALL:
                     testResultStore.update_results(
-                        'all', model, architecture,
+                        'all', model.predict, architecture,
                         X_test, y_test
                     )
 
                     for metabolite_id in X_test['metabolite_id'].unique():
                         testResultStore.update_results(
-                            metabolite_id, 
-                            model,
+                            metabolite_id,
+                            model.predict, 
                             architecture,
                             X_test[X_test['metabolite_id'] == metabolite_id], 
                             y_test.xs(metabolite_id, level='metabolite_id')
@@ -101,8 +105,8 @@ class TestRunner(Runner):
                 else:
                     metabolite_id = tf.frame_name
                     testResultStore.update_results(
-                        metabolite_id, 
-                        model,
+                        metabolite_id,
+                        model.predict,
                         architecture,
                         X_test, 
                         y_test

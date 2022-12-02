@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from src.pipeline.taskloader import TaskFrame
 from src.settings.strategy import Strategy
 
-from src.utils.parsers.cv_parser import to_cv_params, parse_cv_result
+from src.parsers.cv_parser import to_cv_params, parse_cv_result
 
 from scipy.stats import pearsonr
 

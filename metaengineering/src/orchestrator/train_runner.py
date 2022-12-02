@@ -1,8 +1,7 @@
 from src.orchestrator.runner import Runner
-from src.utils.parsers.cv_parser import _fmt_regressor, get_architectures, parse_cv_result
+from src.parsers.cv_parser import _fmt_regressor, get_architectures, parse_cv_result
 from src.settings.strategy import Strategy
 
-from src.utils.utils import TestResultStore, build_model_pipeline, get_generator, get_project_root
 from src.orchestrator.config import GRIDSEARCH_KWARGS, PATH_PREFIX, RunConfig
 
 from src.pipeline.taskloader import TaskLoader, TaskFrame

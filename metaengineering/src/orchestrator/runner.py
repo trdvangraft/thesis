@@ -1,4 +1,4 @@
-from src.utils.parsers.cv_parser import parse_cv_result
+from src.parsers.cv_parser import parse_cv_result
 from src.orchestrator.base_runner import BaseRunner
 
 from src.utils.utils import build_model_pipeline

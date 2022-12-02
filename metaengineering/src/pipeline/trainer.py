@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 from src.pipeline.taskloader import TaskLoader, TaskFrame, TaskLoaderConfig
 from src.settings.strategy import Strategy
 
-from src.utils.parsers.cv_parser import to_cv_params, parse_cv_result
+from src.parsers.cv_parser import to_cv_params, parse_cv_result
 
 import pandas as pd
 
