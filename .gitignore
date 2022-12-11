@@ -161,3 +161,6 @@ cython_debug/
 
 **/mlruns/**
 metaengineering/mlruns
+
+# remove the node2vec data directory
+metaengineering/data/mag
