@@ -23,7 +23,7 @@ from torch_geometric.utils import from_networkx, to_networkx
 import torch_geometric.transforms as T
 
 from src.gnn.data_augmentation import DataAugmentation
-from src.settings.metabolites import ENZYMES
+from src.settings.metabolites import ENZYMES, PRECURSOR_METABOLITES
 
 def edge_index_from_df(
     graph_fc_df : pd.DataFrame, 
@@ -50,35 +50,43 @@ def from_node_attributes(attributes: Dict[Hashable, dict[str, Any]]):
     node_attributes = list(attributes[list(attributes.keys())[0]].keys())
     return torch.Tensor([collect_from_key(attributes, attribute) for attribute in node_attributes]).T.contiguous()
 
+def get_enzyme_features(row_series, data_augmentation):
+    enzyme_attributes = {
+        key: { 
+            "fc": value, 
+        } 
+        for key, value in row_series.to_dict().items()
+        if data_augmentation.data_augmentation_is_enzyme(key)
+    }
+    return from_node_attributes(enzyme_attributes)
+
 def get_samples_hetero_graph(
     target_metabolite_id: str,
+    strategy: Strategy,
     valid_metabolites: List[str],
     graph_fc_df: pd.DataFrame,
     edge_list_df: pd.DataFrame,
     node_embeddings: np.ndarray,
 ):
     samples: List[HeteroData] = []
+
+    train_samples: List[HeteroData] = []
+    test_samples: List[HeteroData] = []
+
     data_augmentation = DataAugmentation(
         valid_metabolites, ENZYMES, graph_fc_df
     )
 
-    edge_index = edge_index_from_df(graph_fc_df, edge_list_df)
+    X_train_df, X_test_df = get_knockout_orf(strategy, target_metabolite_id)
 
-    for idx, row_series in graph_fc_df.iterrows():
-        # print(row_series.to_dict())
-        enzyme_attributes = {
-            key: { 
-                "fc": value, 
-            } 
-            for key, value in row_series.to_dict().items()
-            if data_augmentation.data_augmentation_is_enzyme(key)
-        }
+    edge_index = edge_index_from_df(graph_fc_df, edge_list_df, valid_metabolites)
 
+    for knockout_id, row_series in graph_fc_df.iterrows():
         metabolite_attributes = {
             key: {
                 "fc": value,
-                "train_mask": data_augmentation.data_augmentation_train_mask(key, target_metabolite_id, value),
-                "test_mask": data_augmentation.data_augmentation_test_mask(key, target_metabolite_id), 
+                "train_mask": data_augmentation.data_augmentation_train_mask(key, target_metabolite_id, value, knockout_id, X_train_df, strategy),
+                "test_mask": data_augmentation.data_augmentation_test_mask(key, target_metabolite_id, value, knockout_id, X_test_df),
                 # "pathway": data_augmentation_get_pathway(key),
             } 
             for key, value in row_series.to_dict().items()
@@ -88,7 +96,7 @@ def get_samples_hetero_graph(
         # print(from_node_attributes(enzyme_attributes).shape)
         # print(from_node_attributes(metabolite_attributes).shape)
 
-        enzyme_features = from_node_attributes(enzyme_attributes)
+        enzyme_features = get_enzyme_features(row_series, data_augmentation)
         metabolite_features = from_node_attributes(metabolite_attributes)
 
         num_metabolite_nodes = metabolite_features.shape[0]
@@ -109,36 +117,69 @@ def get_samples_hetero_graph(
         data = T.ToUndirected()(data)
 
         samples.append(data)
-    return samples
 
-def get_graph_fc(
-    edge_list_df, 
-    valid_metabolites
-):
+    for sample in samples:
+        if strategy == Strategy.ONE_VS_ALL:
+            train_samples.append(sample)
+            test_samples.append(sample)
+        elif sample['metabolites']['test_mask'].sum() > 0:
+            test_samples.append(sample)
+        elif sample['metabolites']['train_mask'].sum() > 0:
+            train_samples.append(sample)
+
+    return train_samples, test_samples
+
+def get_knockout_orf(strategy: Strategy, target_metabolite_id: str):
+    tf = get_tf(strategy)
+    trainer = Trainer()
+
+    if strategy == Strategy.ALL:
+        split_kwargs = dict(stratify='metabolite_id', shuffle=True)
+    else:
+        split_kwargs = dict(stratify=None, shuffle=False)
+
+    train_dfs = []
+    test_dfs = []
+
+    for tf in get_tf(strategy):
+        X_train, X_test, _, _ = trainer.do_train_test_split(tf, strategy, **split_kwargs)
+
+        if 'metabolite_id' not in X_test.columns:
+            X_test = X_test.assign(metabolite_id=tf.frame_name)
+            X_train = X_train.assign(metabolite_id=tf.frame_name)
+
+        train_dfs.append(X_train)
+        test_dfs.append(X_test)
+    
+    X_train = pd.concat(train_dfs, axis=0)
+    X_test = pd.concat(test_dfs, axis=0)
+
+    
+    return X_train[['KO_ORF', 'metabolite_id']], X_test[['KO_ORF', 'metabolite_id']]
+
+def get_tf(strategy: Strategy):
     DataLoader.DATA_FOLDER = f'{get_project_root()}/data/training/'
-
     tier = Tier.TIER0
-    strategy = Strategy.ALL
 
     dl_config = DataLoaderConfig(
-        additional_filters=["is_precursor", ],
-        additional_transforms=["log_fold_change_protein", ]
-    )
-
-    tl_config = TaskLoaderConfig(
-        data_throttle=1,
-        tier=tier,
+        additional_filters=['is_precursor'],
+        additional_transforms=["log_fold_change_protein"]
     )
 
     dl = DataLoader()
     dl.prepare_dataloader(dl_config)
 
     tl = TaskLoader()
-    tl.prepare_taskloader(tl_config)
+    tl.prepare_taskloader(TaskLoaderConfig())
 
     gen = get_generator(dl, tl, strategy, tier)
-    tf = next(gen)
-    trainer = Trainer()
+    return gen
+
+def get_graph_fc(
+    edge_list_df, 
+    valid_metabolites
+):
+    tf = next(get_tf(Strategy.ALL))
 
     x_scaler = StandardScaler()
     y_scaler = StandardScaler()
@@ -149,11 +190,19 @@ def get_graph_fc(
     scaled_x = x_scaler.fit_transform(df_x)
     scaled_y = pd.DataFrame(y_scaler.fit_transform(df_y), columns=df_y.columns, index=df_y.index)
 
-    matching_precursor_metabolite = [
-        (metabolite_id, scaled_y.loc[:, metabolite_id].values) 
-        for cobra_metabolite_id in edge_list_df['metabolite_id'].unique()
-        if (metabolite_id := list(filter(lambda p: p in cobra_metabolite_id, valid_metabolites))[0])
-    ]
+    _metabolites_of_interest = list(set(valid_metabolites) & set(PRECURSOR_METABOLITES))
+    print(f"{_metabolites_of_interest=}")
+
+    matching_precursor_metabolite = []
+
+    for cobra_metabolite_id in edge_list_df['metabolite_id'].unique():
+        metabolite_id_list = list(filter(lambda p: p in cobra_metabolite_id, _metabolites_of_interest))
+
+        if len(metabolite_id_list) > 0:
+            metabolite_id_str = metabolite_id_list[0]
+            matching_precursor_metabolite.append((metabolite_id_str, scaled_y.loc[:, metabolite_id_str].values))
+        else:
+            matching_precursor_metabolite.append((cobra_metabolite_id, np.zeros(shape=scaled_y.shape[0])))
 
     cobra_df_y = pd.DataFrame.from_records(matching_precursor_metabolite).T
     cobra_df_y = cobra_df_y.explode(cobra_df_y.columns.to_list()) \

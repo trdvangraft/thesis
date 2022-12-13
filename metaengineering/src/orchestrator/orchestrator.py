@@ -25,8 +25,21 @@ class BaseOrchestrator:
         self.dl_config = data_loader_config
         self.tl_config = task_loader_config
     
+    def get_dataloader(self):
+        dl = DataLoader()
+        dl.prepare_dataloader(self.dl_config)
+        return dl
+    
+    def get_taskloader(self):
+        tl = TaskLoader()
+        tl.prepare_taskloader(self.tl_config)
+        return tl
+    
     def run(self):
         pass
+    
+    def _is_valid_state(self):
+        return self.dl_config is not None and self.tl_config is not None
 
 class SklearnOrchestrator(BaseOrchestrator):
     def __init__(self) -> None:
@@ -48,12 +61,9 @@ class SklearnOrchestrator(BaseOrchestrator):
         if not self._is_valid_state():
             raise ValueError("Missing config file")
         
-        dl = DataLoader()
-        dl.prepare_dataloader(self.dl_config)
-
-        tl = TaskLoader()
-        tl.prepare_taskloader(self.tl_config)
-
+        dl = self.get_dataloader()
+        tl = self.get_taskloader()
+        
         TrainRunner(dl, tl).prepare_run(self.run_config).run_training()
         TestRunner(dl, tl).prepare_run(self.run_config).run_testing()
 
@@ -62,7 +72,28 @@ class SklearnOrchestrator(BaseOrchestrator):
         explainer.run()
 
     def _is_valid_state(self):
-        return self.dl_config and self.tl_config and self.run_config and self.explain_config
+        return super()._is_valid_state() and self.run_config is not None and self.explain_config is not None
 
 class SGDOrchestrator(BaseOrchestrator):
-    pass
+    def __init__(self) -> None:
+        super().__init__()
+    
+    def prepare_orchestrator(self, 
+        data_loader_config: DataLoaderConfig, 
+        task_loader_config: TaskLoaderConfig
+    ):
+        super().prepare_orchestrator(data_loader_config, task_loader_config)
+    
+    def run(self):
+        if not self._is_valid_state():
+            raise ValueError("Missing config file")
+        
+        dl = self.get_dataloader()
+        tl = self.get_taskloader()
+
+        
+
+    
+    def _is_valid_state(self):
+        return super()._is_valid_state()
+    

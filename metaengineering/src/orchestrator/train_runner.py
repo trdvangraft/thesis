@@ -9,6 +9,10 @@ from src.pipeline.dataloader import DataLoader
 
 from sklearn.model_selection import RepeatedKFold, GridSearchCV
 
+class BaseTrainRunner(Runner):
+    def __init__(self, dl: DataLoader, tl: TaskLoader) -> None:
+        super().__init__(dl, tl)
+
 class TrainRunner(Runner):
     def __init__(
         self,
@@ -54,3 +58,7 @@ class TrainRunner(Runner):
                 continue
             cv_result = self._do_grid_search(tf, self.current_run_config.strategy, split_kwargs)
             self._write_cv_result(cv_result, tf)
+
+class SGDTrainRunner(BaseTrainRunner):
+    def __init__(self, dl: DataLoader, tl: TaskLoader) -> None:
+        super().__init__(dl, tl)
