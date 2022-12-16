@@ -45,7 +45,7 @@ class TestResultStore:
     def update_results(
         self,
         key: str,
-        predict_fn: Callable[pd.DataFrame, np.array],
+        predict_fn: Callable[[pd.DataFrame], np.array],
         # model: TransformedTargetRegressor,
         architecture: str,
         X_test: np.array,

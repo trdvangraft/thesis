@@ -43,7 +43,7 @@ def edge_index_from_df(
 
     return torch.Tensor(edges).to(torch.long).T
 
-def from_node_attributes(attributes: Dict[Hashable, dict[str, Any]]):
+def from_node_attributes(attributes: Dict[Hashable, Dict[str, Any]]):
     def collect_from_key(data, key: str):
         return [node[key] for id, node in data.items()]
 

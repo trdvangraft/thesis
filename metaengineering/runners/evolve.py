@@ -25,7 +25,7 @@ from sklearn.linear_model import ElasticNet
 from sklearn.svm import SVR
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 
-import visualize
+from src.visualizers import visualize
 import neat
 
 from neat.reporting import BaseReporter
