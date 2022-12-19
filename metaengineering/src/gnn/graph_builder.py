@@ -18,7 +18,7 @@ from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 
 import torch
 
-from torch_geometric.data import HeteroData
+from torch_geometric.data import HeteroData, Data
 from torch_geometric.utils import from_networkx, to_networkx
 import torch_geometric.transforms as T
 
@@ -32,6 +32,7 @@ def edge_index_from_df(
 ):
     data_augmentation = DataAugmentation(valid_metabolites, ENZYMES, graph_fc_df)
 
+    # Get the names of the nodes that live in the graph
     first_row = graph_fc_df.iloc[[0]]
     enzyme_nodes = np.array([str(key) for key in first_row.to_dict().keys() if data_augmentation.data_augmentation_is_enzyme(key)])
     metabolite_nodes = np.array([str(key) for key in first_row.to_dict().keys() if data_augmentation.data_augmentation_is_metabolite(key)])
@@ -39,6 +40,24 @@ def edge_index_from_df(
     edges = [
         [np.where(enzyme_nodes == enzyme)[0][0], np.where(metabolite_nodes == metabolite)[0][0]]
         for enzyme, metabolite in zip(edge_list['enzyme'], edge_list['metabolite_id'])
+    ]
+
+    return torch.Tensor(edges).to(torch.long).T
+
+def edge_index_from_df_protein_only(
+    graph_fc_df : pd.DataFrame, 
+    edge_list: pd.DataFrame,
+    valid_metabolites: List[str],
+):
+    data_augmentation = DataAugmentation(valid_metabolites, ENZYMES, graph_fc_df)
+
+    # Get the names of the nodes that live in the graph
+    first_row = graph_fc_df.iloc[[0]]
+    enzyme_nodes = np.array([str(key) for key in first_row.to_dict().keys() if data_augmentation.data_augmentation_is_enzyme(key)])
+
+    edges = [
+        [np.where(enzyme_nodes == source_node)[0][0], np.where(enzyme_nodes == target_node)[0][0]]
+        for source_node, target_node in zip(edge_list['source'], edge_list['target'])
     ]
 
     return torch.Tensor(edges).to(torch.long).T
@@ -129,6 +148,64 @@ def get_samples_hetero_graph(
 
     return train_samples, test_samples
 
+def get_samples_graph(
+    target_metabolite_id: str,
+    strategy: Strategy,
+    valid_metabolites: List[str],
+    graph_fc_df: pd.DataFrame,
+    edge_index: torch.Tensor,
+    node_embeddings: np.ndarray,
+):
+    samples: List[Data] = []
+
+    train_samples: List[Data] = []
+    test_samples: List[Data] = []
+
+    data_augmentation = DataAugmentation(
+        valid_metabolites, ENZYMES, graph_fc_df
+    )
+
+    X_train_df, X_test_df = get_knockout_orf(strategy, target_metabolite_id)
+
+    for knockout_id, row_series in graph_fc_df.iterrows():
+        metabolite_attributes = {
+            key: {
+                "fc": value,
+                "train_mask": data_augmentation.data_augmentation_train_mask(key, target_metabolite_id, value, knockout_id, X_train_df, strategy),
+                "test_mask": data_augmentation.data_augmentation_test_mask(key, target_metabolite_id, value, knockout_id, X_test_df),
+                # "pathway": data_augmentation_get_pathway(key),
+            } 
+            for key, value in row_series.to_dict().items()
+            if data_augmentation.data_augmentation_is_metabolite(key)
+        }
+
+        enzyme_features = get_enzyme_features(row_series, data_augmentation)
+        metabolite_features = from_node_attributes(metabolite_attributes)
+
+        num_enzyme_nodes = enzyme_features.shape[0]
+
+        data = Data(
+            x=torch.hstack((enzyme_features, node_embeddings[:num_enzyme_nodes])),
+            edge_index=edge_index,
+            y=metabolite_features[:, 0],
+            num_nodes = num_enzyme_nodes,
+            train_mask = metabolite_features[:, 1],
+            test_mask = metabolite_features[:, 2],
+        )
+
+        samples.append(data)
+
+    for sample in samples:
+        if strategy == Strategy.ONE_VS_ALL:
+            train_samples.append(sample)
+            test_samples.append(sample)
+        elif sample['test_mask'].sum() > 0:
+            test_samples.append(sample)
+        elif sample['train_mask'].sum() > 0:
+            train_samples.append(sample)
+
+    return train_samples, test_samples
+
 def get_knockout_orf(strategy: Strategy, target_metabolite_id: str):
     tf = get_tf(strategy)
     trainer = Trainer()
@@ -179,6 +256,9 @@ def get_graph_fc(
     edge_list_df, 
     valid_metabolites
 ):
+    """
+    Functions that transforms a taskframe to a dataframe containing the enzyme and metabolite fold changes
+    """
     tf = next(get_tf(Strategy.ALL))
 
     x_scaler = StandardScaler()
@@ -215,5 +295,31 @@ def get_graph_fc(
     graph_fc_df = pd.concat([
         pd.DataFrame(scaled_x, index=df_x.index, columns=df_x.columns).loc[:, edge_list_df['enzyme'].unique()],
         cobra_df_y,
+    ], axis=1).fillna(0)
+    return graph_fc_df
+
+def get_graph_fc_protein_only(
+    edge_list_df, 
+    valid_metabolites
+):
+    """
+    Functions that transforms a taskframe to a dataframe containing the enzyme and metabolite fold changes
+    """
+    tf = next(get_tf(Strategy.ALL))
+
+    x_scaler = StandardScaler()
+    y_scaler = StandardScaler()
+
+    df_x = tf.x.reset_index(level="metabolite_id", drop=True).drop_duplicates()
+    df_y: pd.DataFrame = tf.y.to_frame().reset_index().pivot_table(values='metabolite_concentration', index='KO_ORF', columns='metabolite_id').loc[df_x.index]
+
+    scaled_x = x_scaler.fit_transform(df_x)
+    scaled_y = pd.DataFrame(y_scaler.fit_transform(df_y), columns=df_y.columns, index=df_y.index)
+
+    _metabolites_of_interest = list(set(valid_metabolites) & set(PRECURSOR_METABOLITES))
+
+    graph_fc_df = pd.concat([
+        pd.DataFrame(scaled_x, index=df_x.index, columns=df_x.columns).loc[:, pd.unique(edge_list_df[['source', 'target']].values.ravel('K'))],
+        scaled_y.loc[:, _metabolites_of_interest],
     ], axis=1).fillna(0)
     return graph_fc_df

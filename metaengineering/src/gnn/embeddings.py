@@ -12,10 +12,9 @@ import numpy as np
 from src.gnn.graph_builder import edge_index_from_df
 
 def generate_embedding(
-    graph_fc_df: pd.DataFrame,
-    edge_list: pd.DataFrame,
-    valid_metabolites: List[str],
+    edge_index: torch.Tensor,
     device,
+    hetero=True,
 ):
     def get_mask(node_set, nodes):
         mask = torch.zeros(len(nodes), dtype=torch.long, device=device)
@@ -37,8 +36,8 @@ def generate_embedding(
             total_loss += loss.item()
         return total_loss / len(loader)
     
-    edge_index = edge_index_from_df(graph_fc_df, edge_list, valid_metabolites).T
-    edge_index[:, 1] = edge_index[:, 1] + edge_index[:, 0].max()
+    if hetero:
+        edge_index[:, 1] = edge_index[:, 1] + edge_index[:, 0].max()
 
     nodes = np.concatenate((np.unique(edge_index[:,0]), np.unique(edge_index[:,1])))
     num_nodes = len(nodes)
@@ -53,8 +52,7 @@ def generate_embedding(
     test_set = nodes[train_size:train_size+test_size]
     val_set = nodes[train_size+test_size:]
 
-    assert len(train_set) + len(test_set) + len(val_set) == len(nodes)
-
+    assert len(train_set) + len(test_set) + len(val_set) == num_nodes
     print("train set\t",train_set[:10])
     print("test set \t",test_set[:10])
     print("val set  \t",val_set[:10])
