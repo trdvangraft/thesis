@@ -88,6 +88,6 @@ def tune_metabolite_hyper_parameters(
         },
         num_samples=num_samples,
         scheduler=scheduler,
-        progress_reporter=reporter,
+        # progress_reporter=reporter,
     )
     return result

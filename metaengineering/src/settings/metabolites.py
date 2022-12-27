@@ -8,7 +8,7 @@ ENZYMES = protein_metabolite_df.to_df().columns.to_list()
 
 METABOLITES = protein_metabolite_df.obs.columns.to_list()
 PRECURSOR_METABOLITES = [
-    'g6p;g6p-B', 'g6p;f6p;g6p-B', 'f6p', 'dhap', '3pg;2pg',
+    'g6p;g6p-B', 'f6p', 'dhap', '3pg;2pg',
     'pep', 'pyr', 'r5p', 'e4p', 'accoa', 'akg', 'oaa',
 ]
 
