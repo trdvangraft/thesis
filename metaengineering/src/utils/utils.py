@@ -1,11 +1,8 @@
 import os
-from collections import defaultdict
 from typing import List
 
-import numpy as np
 import pandas as pd
 from pathlib import Path
-from scipy.stats import pearsonr
 
 from src.pipeline.dataloader import DataLoader
 from src.pipeline.taskloader import TaskLoader, TaskFrame
@@ -19,14 +16,9 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler, MinMaxScaler, R
 from sklearn.compose import make_column_transformer, ColumnTransformer, TransformedTargetRegressor
 from sklearn.pipeline import Pipeline
 
-from sklearn.model_selection import train_test_split, GridSearchCV, RepeatedKFold, cross_val_score
-from sklearn.feature_selection import RFE
-from sklearn.decomposition import PCA
+from sklearn.tree import DecisionTreeRegressor
 
-from sklearn.tree import DecisionTreeRegressor, plot_tree
-from sklearn.svm import SVR
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import ElasticNet, GammaRegressor
+import matplotlib.pyplot as plt
 
 
 def gather_results(paths: List[str]):
@@ -127,3 +119,8 @@ def get_project_root():
 def make_path_if_not_exists(path):
     if not os.path.exists(path):
         os.makedirs(path)
+
+def save_fig(path: str, name: str):
+    make_path_if_not_exists(path)
+    plt.savefig(f"{path}/{name}.png", bbox_inches='tight')
+    plt.savefig(f"{path}/{name}.svg", bbox_inches='tight')

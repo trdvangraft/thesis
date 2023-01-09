@@ -62,7 +62,7 @@ def tune_metabolite_hyper_parameters(
             grace_period=10,
             reduction_factor=2
         )
-    reporter = CLIReporter(
+    reporter: CLIReporter = CLIReporter(
         metric_columns=["loss", "training_iteration"]
     )
 

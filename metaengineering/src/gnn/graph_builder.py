@@ -84,7 +84,7 @@ def get_samples_hetero_graph(
     strategy: Strategy,
     valid_metabolites: List[str],
     graph_fc_df: pd.DataFrame,
-    edge_list_df: pd.DataFrame,
+    edge_index: pd.DataFrame,
     node_embeddings: np.ndarray,
 ):
     samples: List[HeteroData] = []
@@ -97,8 +97,6 @@ def get_samples_hetero_graph(
     )
 
     X_train_df, X_test_df = get_knockout_orf(strategy, target_metabolite_id)
-
-    edge_index = edge_index_from_df(graph_fc_df, edge_list_df, valid_metabolites)
 
     for knockout_id, row_series in graph_fc_df.iterrows():
         metabolite_attributes = {
