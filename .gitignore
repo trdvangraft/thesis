@@ -160,7 +160,7 @@ cython_debug/
 #.idea/
 
 **/mlruns/**
-**/mlartifcats/**
+**/mlartifacts/**
 metaengineering/mlruns
 
 # remove the node2vec data directory
