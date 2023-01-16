@@ -30,6 +30,7 @@ class DataLoader:
         """
         df = self.data_factory
         parsed_config = df.parse_config(self.dl_config)
+        print(parsed_config)
 
         return df \
             .load(frames=[

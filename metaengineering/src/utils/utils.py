@@ -1,5 +1,6 @@
 import os
 from typing import List
+import pickle
 
 import pandas as pd
 from pathlib import Path
@@ -124,3 +125,11 @@ def save_fig(path: str, name: str):
     make_path_if_not_exists(path)
     plt.savefig(f"{path}/{name}.png", bbox_inches='tight')
     plt.savefig(f"{path}/{name}.svg", bbox_inches='tight')
+
+def load_model(tier: Tier, strategy: Strategy, metabolite: str):
+    if strategy == Strategy.ALL:
+        path = f"{get_project_root()}/model/{tier}/{strategy}_all.pickle" 
+    else:
+        path = f"{get_project_root()}/model/{tier}/{strategy}_{metabolite}.pickle"
+    with open(path, 'rb') as f:
+        return pickle.load(f)
