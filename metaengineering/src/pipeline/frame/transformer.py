@@ -64,27 +64,36 @@ class FrameTransformers:
     
     def _ppi_coo_matrix(self, df):
         def get_idx(name: str) -> np.array:
-            return [np.where(unique_labels == elem)[0][0] for _, elem in df[name].iteritems()]
+            return [np.where(proteins == elem)[0][0] for _, elem in df[name].items()]
 
         name_a, name_b = 'stringId_A', 'stringId_B'
 
-        proteins = self.frame_cache.get_frame('proteins').columns.unique(0).to_list()
+        proteins = self.frame_cache.get_frame('proteins').columns.unique(0)
         df = df[(df[name_a].isin(proteins)) & (df[name_b].isin(proteins))]
 
-        unique_labels = np.unique(pd.concat([df[name_a], df[name_b]]))
-        adj_matrix = np.zeros(shape=(len(unique_labels), len(unique_labels)))
+        adj_matrix = np.zeros(shape=(len(proteins), len(proteins)))
 
         name_a_idx = get_idx(name_a)
         name_b_idx = get_idx(name_b)
 
         for i, j in zip(name_a_idx, name_b_idx):
             adj_matrix[i, j] = 1
+            adj_matrix[j, i] = 1
 
-        return pd.DataFrame(
+        df = pd.DataFrame(
             data=adj_matrix,
-            index=unique_labels,
-            columns=unique_labels,
+            columns=proteins,
+            index=proteins,
         )
+
+        filtering = 30
+
+        df = df.loc[
+            (df.sum(axis=1) >= filtering),
+            (df.sum(axis=0) >= filtering)
+        ]
+
+        return df
 
     def _apply_fc(self, _df: pd.DataFrame):
         _df.loc[:, _df.columns] = np.log(_df.loc[:, _df.columns])      

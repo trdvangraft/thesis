@@ -83,9 +83,10 @@ class TestTaskLoader(unittest.TestCase):
             self.assertListEqual(metabolite_two_frame.x.index.unique(0).to_list(), ['GENOTYPE_1'])
             self.assertListEqual(metabolite_two_frame.x.index.unique(1).to_list(), ['GEN1', 'GEN3'])
     
-    def test_dataset_all_strategy(self):
-        ann = self.dataloader.get_simple_protein_metabolite_dataframe()
-        gen = self.taskloader.prepare_task(ann, Tier.TIER1).build(Strategy.ALL)
+    def test_dataset_ppi_all_strategy(self):
+        ann = self.dataloader.get_simple_ppi_dataframe()
+        self.taskloader.prepare_taskloader(TaskLoaderConfig(tier=Tier.TIER1))
+        gen = self.taskloader.prepare_task(ann).build(strategy=Strategy.ALL)
 
         number_of_frames = sum(1 for _ in gen)
         self.assertEqual(number_of_frames, 1)
@@ -141,6 +142,16 @@ class TestTaskLoader(unittest.TestCase):
 
         frames = [frame for frame in gen]
         self.assertEqual(len(frames), 1)
+
+    def test_dataset_ppi_all_strategy(self):
+        ann = self.dataloader.get_simple_ppi_dataframe()
+        self.taskloader.prepare_taskloader(TaskLoaderConfig(tier=Tier.TIER1))
+        gen = self.taskloader.prepare_task(ann).build(strategy=Strategy.ALL)
+
+        tf = next(gen)
+        self.assertTupleEqual(tf.x.shape, (63770, 36))
+
+
 
         
 

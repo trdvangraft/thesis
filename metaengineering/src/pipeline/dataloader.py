@@ -79,6 +79,27 @@ class DataLoader:
             ]) \
             .build()
     
+    def get_simple_ppi_dataframe(self):
+        df = self.data_factory
+
+        return df \
+            .load(frames=[
+                    df.loaders.basic_frame,
+                    df.loaders.interaction_frame
+                ]
+            ) \
+            .transform(transforms=[
+                df.transformer.metabolites,
+                df.transformer.proteins,
+                df.transformer.ppi_coo_matrix,
+                df.transformer.log_fold_change_protein,
+            ]) \
+            .filter(filters=[
+                df.filters.is_in_genotype,
+
+            ]) \
+            .build()
+    
     def get_go_dataframe(self):
         df = self.data_factory
         config = DataLoaderConfig(

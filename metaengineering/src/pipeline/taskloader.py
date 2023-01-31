@@ -113,28 +113,33 @@ class TaskLoader:
         y: pd.DataFrame, 
         adj_matrix: pd.DataFrame
     ):
+        # First we make sure that X: (proteomics) has the same enzymes as adj
+        x = x.loc[:, adj_matrix.columns]
+
+        # Second we make the target object
         df = self._get_empty_multi_index_frame(
             indices=[x.index.to_list(), x.columns, y.columns],
             names=['KO_ORF', 'ORF', 'metabolite_id']
-        )
-
-        max_enzyme_interaction = int(adj_matrix.sum(axis=1).max())
+        )       
 
         # foreach knockout we need to build the adj matrix
         # we need to build in a row based fashion
         r = np.zeros(
             shape=(
                 len(x.index) * len(adj_matrix.index), 
-                max_enzyme_interaction
+                len(adj_matrix.index)
             )
         )
 
         knockout_indices = np.arange(x.shape[0])
         for j in range(adj_matrix.shape[0]):
-            indices = np.argwhere(adj_matrix.values[j] > 0).flatten()
-            v = x.iloc[knockout_indices, indices].values
-            r[(knockout_indices * len(x.index) + j), :v.shape[1]] = v
-    
+            x_indices = np.argwhere(adj_matrix.values[j] > 0).flatten()
+            y_indices = knockout_indices * len(adj_matrix.index) + j
+
+            v = x.iloc[knockout_indices, x_indices].values
+            r_prime = r[y_indices]
+            r_prime[:, x_indices] = v
+            r[y_indices] = r_prime
 
         x = pd.DataFrame(
             data=r,
@@ -142,10 +147,11 @@ class TaskLoader:
                 [x.index.to_list(), adj_matrix.index],
                 names=['KO_ORF', 'ORF']
             ),
-            columns=[f"interaction_{i}" for i in range(max_enzyme_interaction)],
+            columns=adj_matrix.columns,
         )
 
         y = self._get_target_frame(y)
+
         return self._merge_frame(df, x, y)
     
     def _build_prepared_base_frame(self, x: pd.DataFrame, y: pd.DataFrame):

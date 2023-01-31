@@ -98,7 +98,7 @@ def fmt_cv_results(df: pd.DataFrame):
     return _df
 
 def get_architectures(df: pd.DataFrame):
-    return ['all'] + df['param_regressor__regressor'].unique().tolist()
+    return ['all'] + df['param_regressor__regressor'].dropna().unique().tolist()
 
 def _fmt_param(param: pd.DataFrame):
     series = param[param.index.str.startswith('param_')].dropna()

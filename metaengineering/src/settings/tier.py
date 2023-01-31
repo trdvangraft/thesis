@@ -18,3 +18,9 @@ class Tier(Enum):
             return 2
         elif tier == Tier.TIER3:
             return 3
+    
+    def __le__(self, b):
+        return Tier.get_order(self) <= Tier.get_order(b)
+    
+    def __lt__(self, b):
+        return Tier.get_order(self) < Tier.get_order(b)

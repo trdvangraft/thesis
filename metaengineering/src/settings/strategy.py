@@ -16,3 +16,18 @@ class Strategy(Enum):
             return Strategy.ONE_VS_ALL
         elif label == 'Strategy.ALL':
             return Strategy.ALL
+    
+    @classmethod
+    def get_order(cls, strategy):
+        if strategy == Strategy.ALL:
+            return 0
+        elif strategy == Strategy.METABOLITE_CENTRIC:
+            return 1
+        elif strategy == Strategy.ONE_VS_ALL:
+            return 2
+    
+    def __le__(self, b):
+        return Strategy.get_order(self) <= Strategy.get_order(b)
+    
+    def __lt__(self, b):
+        return Strategy.get_order(self) < Strategy.get_order(b)

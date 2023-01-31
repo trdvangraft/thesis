@@ -46,7 +46,6 @@ class TestResultStore:
         self,
         key: str,
         predict_fn: Callable[[pd.DataFrame], np.array],
-        # model: TransformedTargetRegressor,
         architecture: str,
         X_test: np.array,
         y_test: np.array
@@ -54,22 +53,14 @@ class TestResultStore:
         if len(X_test) < 2:
             return
 
-        correlation = pearsonr(y_test, predict_fn(X_test))[0]
-
-        if np.isnan(correlation):
-            correlation = 0
-
-        self.results[f"{key}_{architecture}"].append(correlation)
         self.pred_results[f"{key}_{architecture}"].update({
             'y_true': y_test.values,
             'y_pred': predict_fn(X_test),
             'architecture': architecture,
             'metabolite_id': key,
-            'correlation': correlation,
         })
 
     def to_file(self):
-        pd.DataFrame.from_dict(self.results).to_csv(f'{self.experiment_path}/best_model_performance_{self.runner}_{self.strategy}.csv')
         pd.DataFrame.from_dict(self.pred_results).to_json(f'{self.experiment_path}/best_model_prediction_performance_{self.runner}_{self.strategy}.json')
     
     def check_if_result_exists(self):

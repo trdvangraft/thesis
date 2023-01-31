@@ -28,7 +28,6 @@ class TestRunner(Runner):
 
     def run_testing_strategy_all(self):
         results_df = pd.read_csv(f'{self._get_experiment_path()}/{self.current_run_config.strategy}_all.csv')
-        print(results_df)
         results_df = _fmt_regressor(results_df)
         split_kwargs = dict(
             stratify='metabolite_id',
@@ -74,8 +73,9 @@ class TestRunner(Runner):
         if testResultStore.check_if_result_exists() and not self.current_run_config.forced_testing:
             return
 
+        print(f"{architectures}")
         for architecture in architectures:
-            print(architecture)
+            print(f"{architecture=}")
 
             for tf in self._get_new_generator():
                 _result_df = results_df.copy() if architecture == 'all' else results_df[results_df['param_regressor__regressor'] == architecture].copy()
@@ -84,34 +84,29 @@ class TestRunner(Runner):
                     _result_df[_result_df['metabolite_id'] == tf.frame_name]
 
                 _result_df = _result_df.sort_values('rank_test_score').iloc[[0]]
+                for run_id in range(10):
+                    model = self._do_retrain(tf, self.current_run_config.strategy, _result_df, split_kwargs)
+                    _, X_test, _, y_test = self.trainer.do_train_test_split(tf, self.current_run_config.strategy, **split_kwargs)
 
-                model = self._do_retrain(tf, self.current_run_config.strategy, _result_df, split_kwargs)
-                _, X_test, _, y_test = self.trainer.do_train_test_split(tf, self.current_run_config.strategy, **split_kwargs)
-
-                if self.current_run_config.strategy == Strategy.ALL:
-                    testResultStore.update_results(
-                        'all', model.predict, architecture,
-                        X_test, y_test
-                    )
-
-                    for metabolite_id in X_test['metabolite_id'].unique():
+                    if self.current_run_config.strategy == Strategy.ALL:
+                        for metabolite_id in X_test['metabolite_id'].unique():
+                            testResultStore.update_results(
+                                f"{run_id}_{metabolite_id}",
+                                model.predict, 
+                                architecture,
+                                X_test[X_test['metabolite_id'] == metabolite_id], 
+                                y_test.xs(metabolite_id, level='metabolite_id')
+                            )
+                    else:
+                        metabolite_id = tf.frame_name
                         testResultStore.update_results(
-                            metabolite_id,
-                            model.predict, 
+                            f"{run_id}_{metabolite_id}",
+                            model.predict,
                             architecture,
-                            X_test[X_test['metabolite_id'] == metabolite_id], 
-                            y_test.xs(metabolite_id, level='metabolite_id')
+                            X_test, 
+                            y_test
                         )
-                else:
-                    metabolite_id = tf.frame_name
-                    testResultStore.update_results(
-                        metabolite_id,
-                        model.predict,
-                        architecture,
-                        X_test, 
-                        y_test
-                    )
-                    
+                        
                 with open(f'{self._get_model_path()}/{tf.title}_{tf.frame_name}.pickle', 'wb') as handle:
                     pickle.dump(model, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
