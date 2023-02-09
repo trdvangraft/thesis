@@ -8,9 +8,12 @@ from src.pipeline.taskloader import TaskLoader
 from src.pipeline.dataloader import DataLoader
 
 import pandas as pd
+import numpy as np
 import os
 import glob
 import pickle
+
+from sklearn.metrics import mean_absolute_error
 
 class TestRunner(Runner):
     def __init__(self, dl: DataLoader, tl: TaskLoader) -> None:
@@ -84,8 +87,12 @@ class TestRunner(Runner):
                     _result_df[_result_df['metabolite_id'] == tf.frame_name]
 
                 _result_df = _result_df.sort_values('rank_test_score').iloc[[0]]
+
+                models = []
+
                 for run_id in range(10):
                     model = self._do_retrain(tf, self.current_run_config.strategy, _result_df, split_kwargs)
+                    models.append(model)
                     _, X_test, _, y_test = self.trainer.do_train_test_split(tf, self.current_run_config.strategy, **split_kwargs)
 
                     if self.current_run_config.strategy == Strategy.ALL:
@@ -106,8 +113,20 @@ class TestRunner(Runner):
                             X_test, 
                             y_test
                         )
-                        
-                with open(f'{self._get_model_path()}/{tf.title}_{tf.frame_name}.pickle', 'wb') as handle:
-                    pickle.dump(model, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                
+                if architecture == 'all':
+                    model_perfomances = np.array([
+                        mean_absolute_error(
+                            testResultStore.pred_results[f"{run_id}_{metabolite_id}_all"]['y_true'],
+                            testResultStore.pred_results[f"{run_id}_{metabolite_id}_all"]['y_pred'],
+                        )
+                        for run_id in range(10)
+                    ])
+
+                    idx = np.argmin(model_perfomances)
+
+
+                    with open(f'{self._get_model_path()}/{tf.title}_{tf.frame_name}.pickle', 'wb') as handle:
+                        pickle.dump(models[idx], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         testResultStore.to_file()

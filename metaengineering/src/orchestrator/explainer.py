@@ -146,7 +146,12 @@ class Explainer(BaseRunner):
 
         num_instances = len(_df)
         sv = ex.shap_values(self.apply_shap_transform(_df), gc_collect=True)
-        exp = Explanation(sv, np.array([ex.expected_value] * num_instances), data=self.apply_shap_transform(_df), feature_names=feature_names)
+        exp = Explanation(
+            values=sv, 
+            base_values=np.array([ex.expected_value] * num_instances),
+            data=self.apply_shap_transform(_df), 
+            feature_names=feature_names
+        )
 
         with open(f"{path}/{self.current_run_config.strategy}_{metabolite_id}.pickle", 'wb') as f:
             pickle.dump(exp, f)

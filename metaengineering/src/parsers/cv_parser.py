@@ -2,6 +2,7 @@ from typing import Any, Dict, List
 import math
 
 import pandas as pd
+import numpy as np
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
 from sklearn.compose import make_column_transformer, TransformedTargetRegressor
@@ -10,6 +11,7 @@ from sklearn.tree import DecisionTreeRegressor, plot_tree
 from sklearn.svm import SVR
 from sklearn.linear_model import ElasticNet
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.neural_network import MLPRegressor
 
 from sklearn.metrics import mean_absolute_error
 
@@ -64,6 +66,9 @@ def _cv_result_to_model(model: TransformedTargetRegressor, c_best_model: pd.Data
         model.regressor.set_params(
             regressor=SVR(),
             regressor__kernel=c_best_model[f'{prefix}regressor__kernel'].values[0],
+            regressor__C=c_best_model[f'{prefix}regressor__C'].values[0] if type(c_best_model[f'{prefix}regressor__C'].values[0]) == str else float(c_best_model[f'{prefix}regressor__C'].values[0]), 
+            regressor__gamma=c_best_model[f'{prefix}regressor__gamma'].values[0] if '.' not in (c_best_model[f'{prefix}regressor__gamma'].values[0]) else float(c_best_model[f'{prefix}regressor__gamma'].values[0]),
+            regressor__epsilon=c_best_model[f'{prefix}regressor__epsilon'].values[0],
         )
     elif all(c_best_model[f'{prefix}regressor'].str.contains('ElasticNet')):
         print('ElasticNet model')
@@ -78,6 +83,16 @@ def _cv_result_to_model(model: TransformedTargetRegressor, c_best_model: pd.Data
             regressor__n_estimators=int(c_best_model[f'{prefix}regressor__n_estimators'].values[0]),
             regressor__criterion=c_best_model[f'{prefix}regressor__criterion'].values[0],
             regressor__max_depth=None if math.isnan(r := c_best_model[f'{prefix}regressor__max_depth'].values[0]) else int(r)
+        )
+    elif all(c_best_model[f'{prefix}regressor'].str.contains('MLPRegressor')):
+        print('MLPRegressor model')
+
+        layers = c_best_model[f'{prefix}regressor__hidden_layer_sizes'].values[0]
+        layers = layers.replace('[', '').replace(']', '')
+        model.regressor.set_params(
+            regressor=MLPRegressor(),
+            regressor__hidden_layer_sizes=np.fromstring(layers, sep=',', dtype=int),
+            regressor__batch_size=int(c_best_model[f'{prefix}regressor__batch_size'].values[0]),
         )
     else:
         raise NotImplementedError(c_best_model[f'{prefix}regressor'])

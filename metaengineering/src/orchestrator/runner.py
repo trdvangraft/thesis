@@ -21,7 +21,7 @@ class Runner(BaseRunner):
         super().__init__(dl, tl)
 
         self.current_run_config: RunConfig = None
-        self.cv = RepeatedKFold(n_repeats=3, n_splits=5, random_state=0)
+        self.cv = RepeatedKFold(n_repeats=1, n_splits=10, random_state=0)
     
     def prepare_run(self, 
         run_config,
