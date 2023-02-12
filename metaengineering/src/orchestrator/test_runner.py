@@ -14,6 +14,7 @@ import glob
 import pickle
 
 from sklearn.metrics import mean_absolute_error
+from joblib import Parallel, delayed
 
 class TestRunner(Runner):
     def __init__(self, dl: DataLoader, tl: TaskLoader) -> None:
@@ -88,18 +89,20 @@ class TestRunner(Runner):
 
                 _result_df = _result_df.sort_values('rank_test_score').iloc[[0]]
 
-                models = []
+                # models = [
+                #     self.retrain_architecture(run_id, tf, architecture, testResultStore, split_kwargs, _result_df)
+                #     for run_id in range(10)
+                # ]
 
+                models = Parallel(n_jobs=-1)(delayed(self.retrain_architecture)(run_id, tf, architecture, testResultStore, split_kwargs, _result_df) for run_id in range(10))
+
+                _, X_test, _, y_test = self.trainer.do_train_test_split(tf, self.current_run_config.strategy, **split_kwargs)
                 for run_id in range(10):
-                    model = self._do_retrain(tf, self.current_run_config.strategy, _result_df, split_kwargs)
-                    models.append(model)
-                    _, X_test, _, y_test = self.trainer.do_train_test_split(tf, self.current_run_config.strategy, **split_kwargs)
-
                     if self.current_run_config.strategy == Strategy.ALL:
                         for metabolite_id in X_test['metabolite_id'].unique():
                             testResultStore.update_results(
                                 f"{run_id}_{metabolite_id}",
-                                model.predict, 
+                                models[run_id].predict, 
                                 architecture,
                                 X_test[X_test['metabolite_id'] == metabolite_id], 
                                 y_test.xs(metabolite_id, level='metabolite_id')
@@ -108,12 +111,12 @@ class TestRunner(Runner):
                         metabolite_id = tf.frame_name
                         testResultStore.update_results(
                             f"{run_id}_{metabolite_id}",
-                            model.predict,
+                            models[run_id].predict,
                             architecture,
                             X_test, 
                             y_test
                         )
-                
+
                 if architecture == 'all':
                     model_perfomances = np.array([
                         mean_absolute_error(
@@ -130,3 +133,12 @@ class TestRunner(Runner):
                         pickle.dump(models[idx], handle, protocol=pickle.HIGHEST_PROTOCOL)
 
         testResultStore.to_file()
+
+    def retrain_architecture(self, run_id, tf, architecture, testResultStore, split_kwargs, _result_df):
+        model = self._do_retrain(tf, self.current_run_config.strategy, _result_df, split_kwargs)
+        return model
+
+    def get_metabolite_id(self, tf):
+        if self.current_run_config.strategy == Strategy.ALL:
+            return 'all'
+        return tf.frame_name

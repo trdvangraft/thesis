@@ -10,7 +10,7 @@ GRIDSEARCH_KWARGS = dict(
     scoring='neg_mean_absolute_error',
     n_jobs=-1,
     refit=True,
-    verbose=1,
+    verbose=10,
     error_score='raise',
 )
 

@@ -26,22 +26,29 @@ class Trainer:
         shuffle=False,
         stratify=None,
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-        df = tf.x.reset_index()
-
         if strategy == strategy.ONE_VS_ALL:
+            df = tf.x.reset_index()
             metabolite_id = tf.frame_name
             X_train, X_test = df[df['metabolite_id'] != metabolite_id], df[df['metabolite_id'] == metabolite_id]
             y_train, y_test = tf.y[X_train.index], tf.y[X_test.index]
             return X_train, X_test, y_train, y_test
 
-        return train_test_split(
-            df,
+        X_train_index, X_test_index, y_train, y_test = train_test_split(
+            tf.x.index,
             tf.y,
             test_size=test_size,
             random_state=0,
             shuffle=shuffle,
-            stratify=df[stratify] if stratify is not None else stratify
+            stratify=tf.x.reset_index()[stratify] if stratify is not None else stratify
         )
+
+        X_train = tf.x.loc[X_train_index].reset_index()
+        X_test = tf.x.loc[X_test_index].reset_index()
+
+        y_train = y_train.to_frame().set_index(X_train_index)
+        y_test = y_test.to_frame().set_index(X_test_index)
+
+        return X_train, X_test, y_train, y_test
 
     def do_grid_search(
         self,
