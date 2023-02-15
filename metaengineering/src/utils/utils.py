@@ -83,7 +83,9 @@ def build_config(
     additional_filters=[],
     additional_transforms=[],
     forced_training=False,
-    forced_testing=False, 
+    forced_testing=False,
+    forced_shap=False,
+    forced_lime=False, 
     data_throttle=1,
 ):
     dl_config = DataLoaderConfig(
@@ -109,7 +111,9 @@ def build_config(
     exp_config = ExplanationConfig(
         experiment_id=str(tier),
         tier=tier,
-        strategy=strategy
+        strategy=strategy,
+        forced_lime=forced_lime,
+        forced_shap=forced_shap,
     )
 
     return dl_config, tl_config, run_config, exp_config

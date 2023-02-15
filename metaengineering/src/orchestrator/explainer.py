@@ -117,7 +117,7 @@ class Explainer(BaseRunner):
         ex = KernelExplainer(self.get_shap_predict_fn(), X_train_summary, seed=0)
         selected_feature_names = np.vectorize(lambda x: x.removeprefix("num__"))(self.model.regressor_[:-1].get_feature_names_out())
 
-        metabolites_of_interests = ['pyr', 'pep', 'dhap', 'all']
+        metabolites_of_interests = ['pyr', 'pep', 'dhap', 'all', '3pg;2pg', 'accoa', 'akg', 'e4p', 'f6p', 'g6p;f6p;g6p-B', 'g6p;g6p-B', 'oaa', 'r5p']
 
         if self.current_run_config.strategy == Strategy.ALL:
             for id in metabolites_of_interests:

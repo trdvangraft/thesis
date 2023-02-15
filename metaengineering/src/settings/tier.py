@@ -8,6 +8,17 @@ class Tier(Enum):
     TIER2 = "protein_stoichiometry"
     TIER3 = "protein_metabolite_stoichiometry"
 
+    @staticmethod
+    def from_str(label):
+        if label == 'Tier.TIER0':
+            return Tier.TIER0
+        elif label == 'Tier.TIER1':
+            return Tier.TIER1
+        elif label == 'Tier.TIER2':
+            return Tier.TIER2
+        elif label == 'Tier.TIER3':
+            return Tier.TIER3
+
     @classmethod
     def get_order(cls, tier):
         if tier == Tier.TIER0:
