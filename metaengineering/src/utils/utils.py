@@ -37,13 +37,13 @@ def get_generator(
     tier: Tier
 ):
     df = dl.get_dataframe()
-    gen = tl.prepare_task(df).build(strategy)
+    gen = tl.prepare_task(df).build(strategy, tier)
     return gen
 
 def build_model_pipeline(
-    tf: TaskFrame = None,
+    tf: TaskFrame,
 ):
-    numeric_features = ['enzyme_concentration'] + tf.x.columns.to_list()
+    numeric_features = ['enzyme_concentration'] + tf.x.columns.difference(['metabolite_id', 'KO_ORF', 'ORF']).to_list()
     numeric_features = list(filter(lambda x: x in tf.x.columns.to_list(), numeric_features))
     numeric_transformer = Pipeline(
         steps=[
@@ -51,17 +51,27 @@ def build_model_pipeline(
         ]
     )
 
+    cat_features = ['metabolite_id']
+    cat_features = list(filter(lambda x: x in tf.x.columns.to_list(), cat_features))
+    cat_transformer = Pipeline(
+        steps=[
+            ('encoder', OrdinalEncoder())
+        ]
+    )
+
     prepocessor = ColumnTransformer(
         transformers=[
             ('num', numeric_transformer, numeric_features),
-            # ('cat', categorical_transformer, cat_features),
+            ('cat', cat_transformer, cat_features),
         ],
-        remainder='drop'
+        remainder='drop',
+        # verbose=True,
+        # verbose_feature_names_out=True
     )
 
     estimator = DecisionTreeRegressor()
 
-    clf = Pipeline(
+    model = Pipeline(
         steps=[
             ('preprocessor', prepocessor),
             # ('pca', PCA()),
@@ -69,10 +79,6 @@ def build_model_pipeline(
         ]
     )
 
-    model = TransformedTargetRegressor(
-        regressor=clf,
-        transformer=None,
-    )
     return model
 
 def build_config(

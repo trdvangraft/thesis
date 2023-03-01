@@ -26,6 +26,13 @@ class Trainer:
         shuffle=False,
         stratify=None,
     ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+        X_train = pd.read_csv(f'./data/preprocessed/x_train_{tf.tier}_{tf.frame_name}_{strategy}.csv')
+        X_test = pd.read_csv(f'./data/preprocessed/x_test_{tf.tier}_{tf.frame_name}_{strategy}.csv')
+        y_train = pd.read_csv(f'./data/preprocessed/y_train_{tf.tier}_{tf.frame_name}_{strategy}.csv').set_index(['KO_ORF', 'metabolite_id'])['metabolite_concentration']
+        y_test = pd.read_csv(f'./data/preprocessed/y_test_{tf.tier}_{tf.frame_name}_{strategy}.csv').set_index(['KO_ORF', 'metabolite_id'])['metabolite_concentration']
+        return X_train, X_test, y_train, y_test
+
+
         if strategy == strategy.ONE_VS_ALL:
             df = tf.x.reset_index()
             metabolite_id = tf.frame_name
@@ -79,7 +86,7 @@ class Trainer:
         self,
         tf: TaskFrame, 
         strategy: Strategy,
-        model: TransformedTargetRegressor, 
+        model: Pipeline, 
         split_kwargs: Dict
     ):
         X_train, X_test, y_train, y_test = self.do_train_test_split(tf, strategy, **split_kwargs)

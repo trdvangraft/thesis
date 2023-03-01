@@ -5,7 +5,8 @@ import pandas as pd
 import numpy as np
 
 from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
-from sklearn.compose import make_column_transformer, TransformedTargetRegressor
+from sklearn.compose import make_column_transformer
+from sklearn.pipeline import Pipeline
 
 from sklearn.tree import DecisionTreeRegressor, plot_tree
 from sklearn.svm import SVR
@@ -18,52 +19,52 @@ from sklearn.metrics import mean_absolute_error
 def to_cv_params(params: Dict[str, Dict[str, Any]]):
     return [{
         **model_param,
-        'regressor__regressor': [model_param['regressor__regressor']]
+        'regressor': [model_param['regressor']]
     } for model_param in params.values()]
 
-def parse_cv_result(model: TransformedTargetRegressor, c_best_model: pd.DataFrame):
-    model: TransformedTargetRegressor = _cv_result_to_preprocessor(model, c_best_model)
-    if any([name.startswith('param_regressor__pca__') for name in c_best_model.columns]):
+def parse_cv_result(model: Pipeline, c_best_model: pd.DataFrame):
+    model: Pipeline = _cv_result_to_preprocessor(model, c_best_model)
+    if any([name.startswith('param_pca__') for name in c_best_model.columns]):
         model = _cv_result_to_pca(model, c_best_model)
     model = _cv_result_to_model(model, c_best_model)
     return model
 
-def _cv_result_to_preprocessor(model: TransformedTargetRegressor, c_best_model: pd.DataFrame):
-    prefix = 'param_regressor__preprocessor__'
+def _cv_result_to_preprocessor(model: Pipeline, c_best_model: pd.DataFrame):
+    prefix = 'param_preprocessor__'
 
     names = ['MinMaxScaler', 'RobustScaler', 'StandardScaler']
     scalers = [MinMaxScaler(), RobustScaler(), StandardScaler()]
 
     for name, scaler in zip(names, scalers):
         if all(c_best_model[f'{prefix}num__scaler'].str.contains(name)):
-            model.regressor.set_params(
+            model.set_params(
                 preprocessor__num__scaler=scaler
             )
     
     return model
 
-def _cv_result_to_pca(model: TransformedTargetRegressor, c_best_model: pd.DataFrame):
-    prefix= 'param_regressor__pca__'
-    model.regressor.set_params(
+def _cv_result_to_pca(model: Pipeline, c_best_model: pd.DataFrame):
+    prefix= 'param_pca__'
+    model.set_params(
         pca__n_components=c_best_model[f'{prefix}n_components'].values[0]
     )
 
     return model
     
 
-def _cv_result_to_model(model: TransformedTargetRegressor, c_best_model: pd.DataFrame):
-    prefix = 'param_regressor__'
+def _cv_result_to_model(model: Pipeline, c_best_model: pd.DataFrame):
+    prefix = 'param_'
     if all(c_best_model[f'{prefix}regressor'].str.contains('DecisionTreeRegressor')):
         print('DecisionRegressor model')
         # set parameters for decision tree
-        model.regressor.set_params(
+        model.set_params(
             regressor=DecisionTreeRegressor(),
             regressor__criterion=c_best_model[f'{prefix}regressor__criterion'].values[0],
             regressor__max_depth=None if math.isnan(r := c_best_model[f'{prefix}regressor__max_depth'].values[0]) else int(r)
         )
     elif all(c_best_model[f'{prefix}regressor'].str.contains('SVR')):
         print('SVR model')
-        model.regressor.set_params(
+        model.set_params(
             regressor=SVR(),
             regressor__kernel=c_best_model[f'{prefix}regressor__kernel'].values[0],
             regressor__C=c_best_model[f'{prefix}regressor__C'].values[0] if type(c_best_model[f'{prefix}regressor__C'].values[0]) == str else float(c_best_model[f'{prefix}regressor__C'].values[0]), 
@@ -72,24 +73,25 @@ def _cv_result_to_model(model: TransformedTargetRegressor, c_best_model: pd.Data
         )
     elif all(c_best_model[f'{prefix}regressor'].str.contains('ElasticNet')):
         print('ElasticNet model')
-        model.regressor.set_params(
+        model.set_params(
             regressor=ElasticNet(),
             regressor__l1_ratio=c_best_model[f'{prefix}regressor__l1_ratio'].values[0],
         )
     elif all(c_best_model[f'{prefix}regressor'].str.contains('RandomForestRegressor')):
         print('RandomForest model')
-        model.regressor.set_params(
+        model.set_params(
             regressor=RandomForestRegressor(),
             regressor__n_estimators=int(c_best_model[f'{prefix}regressor__n_estimators'].values[0]),
             regressor__criterion=c_best_model[f'{prefix}regressor__criterion'].values[0],
-            regressor__max_depth=None if math.isnan(r := c_best_model[f'{prefix}regressor__max_depth'].values[0]) else int(r)
+            regressor__max_depth=None if math.isnan(r := c_best_model[f'{prefix}regressor__max_depth'].values[0]) else int(r),
+            regressor__max_features=float(c_best_model[f'{prefix}regressor__max_features'].values[0]),
         )
     elif all(c_best_model[f'{prefix}regressor'].str.contains('MLPRegressor')):
         print('MLPRegressor model')
 
         layers = c_best_model[f'{prefix}regressor__hidden_layer_sizes'].values[0]
         layers = layers.replace('[', '').replace(']', '')
-        model.regressor.set_params(
+        model.set_params(
             regressor=MLPRegressor(),
             regressor__hidden_layer_sizes=np.fromstring(layers, sep=',', dtype=int),
             regressor__batch_size=int(c_best_model[f'{prefix}regressor__batch_size'].values[0]),
@@ -113,7 +115,7 @@ def fmt_cv_results(df: pd.DataFrame):
     return _df
 
 def get_architectures(df: pd.DataFrame):
-    return ['all'] + df['param_regressor__regressor'].dropna().unique().tolist()
+    return ['all'] + df['param_regressor'].dropna().unique().tolist()
 
 def _fmt_param(param: pd.DataFrame):
     series = param[param.index.str.startswith('param_')].dropna()
@@ -122,10 +124,10 @@ def _fmt_param(param: pd.DataFrame):
 
 def _fmt_regressor(df: pd.DataFrame):
     _df = df.copy()
-    _df['param_regressor__regressor'] = _df['param_regressor__regressor'].replace(to_replace=r'^DecisionTreeRegressor.*', value="DecisionTreeRegressor()", regex=True)
-    _df['param_regressor__regressor'] = _df['param_regressor__regressor'].replace(to_replace=r'^ElasticNet.*', value="ElasticNet()", regex=True)
-    _df['param_regressor__regressor'] = _df['param_regressor__regressor'].replace(to_replace=r'^SVR.*', value="SVR()", regex=True)
-    _df['param_regressor__regressor'] = _df['param_regressor__regressor'].replace(to_replace=r'^RandomForestRegressor.*', value="RandomForestRegressor()", regex=True)
+    _df['param_regressor'] = _df['param_regressor'].replace(to_replace=r'^DecisionTreeRegressor.*', value="DecisionTreeRegressor()", regex=True)
+    _df['param_regressor'] = _df['param_regressor'].replace(to_replace=r'^ElasticNet.*', value="ElasticNet()", regex=True)
+    _df['param_regressor'] = _df['param_regressor'].replace(to_replace=r'^SVR.*', value="SVR()", regex=True)
+    _df['param_regressor'] = _df['param_regressor'].replace(to_replace=r'^RandomForestRegressor.*', value="RandomForestRegressor()", regex=True)
     return _df
 
 def _rename(name: str):

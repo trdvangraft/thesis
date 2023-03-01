@@ -82,7 +82,7 @@ class TestRunner(Runner):
             print(f"{architecture=}")
 
             for tf in self._get_new_generator():
-                _result_df = results_df.copy() if architecture == 'all' else results_df[results_df['param_regressor__regressor'] == architecture].copy()
+                _result_df = results_df.copy() if architecture == 'all' else results_df[results_df['param_regressor'] == architecture].copy()
 
                 if self.current_run_config.strategy != Strategy.ALL:
                     _result_df[_result_df['metabolite_id'] == tf.frame_name]
@@ -90,11 +90,11 @@ class TestRunner(Runner):
                 _result_df = _result_df.sort_values('rank_test_score').iloc[[0]]
 
                 # models = [
-                #     self.retrain_architecture(run_id, tf, architecture, testResultStore, split_kwargs, _result_df)
+                #     self.retrain_architecture(tf, split_kwargs, _result_df)
                 #     for run_id in range(10)
                 # ]
 
-                models = Parallel(n_jobs=-1)(delayed(self.retrain_architecture)(run_id, tf, architecture, testResultStore, split_kwargs, _result_df) for run_id in range(10))
+                models = Parallel(n_jobs=-1)(delayed(self.retrain_architecture)(tf, split_kwargs, _result_df) for run_id in range(10))
 
                 _, X_test, _, y_test = self.trainer.do_train_test_split(tf, self.current_run_config.strategy, **split_kwargs)
                 for run_id in range(10):
@@ -134,7 +134,7 @@ class TestRunner(Runner):
 
         testResultStore.to_file()
 
-    def retrain_architecture(self, run_id, tf, architecture, testResultStore, split_kwargs, _result_df):
+    def retrain_architecture(self, tf, split_kwargs, _result_df):
         model = self._do_retrain(tf, self.current_run_config.strategy, _result_df, split_kwargs)
         return model
 

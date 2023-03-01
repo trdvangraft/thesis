@@ -17,6 +17,7 @@ class TaskFrame:
     y: pd.DataFrame
     title: str
     frame_name: str
+    tier: Tier
 
     def get_data(self):
         return self.x.merge(self.y, left_index=True, right_index=True)
@@ -42,29 +43,30 @@ class TaskLoader:
     
     def build(self, 
         strategy: Strategy,
-        
+        tier: Tier
     ):
-        return self._get_model(strategy)
+        return self._get_model(strategy, tier)
         
     def _get_model(self, 
-        strategy: Strategy, 
+        strategy: Strategy,
+        tier: Tier 
     ):
         df = self._get_prepared_frame()
         
         if strategy == strategy.ALL:    
             x, y = self._split_frame(df)
-            yield TaskFrame(x, y, strategy, 'all')
+            yield TaskFrame(x, y, strategy, 'all', tier=tier)
         elif strategy == strategy.METABOLITE_CENTRIC:
             level = 1
             for v in df.index.unique(level):
                 _df = df.xs(v, level=level)
                 x, y = self._split_frame(_df)
-                yield TaskFrame(x, y, strategy, v)
+                yield TaskFrame(x, y, strategy, v, tier=tier)
         elif strategy == strategy.ONE_VS_ALL:
             level = 1
             for v in df.index.unique(level):
                 x, y = self._split_frame(df)
-                yield TaskFrame(x, y, strategy, v)
+                yield TaskFrame(x, y, strategy, v, tier=tier)
 
     def _throttle_dataframe(self, 
         df: pd.DataFrame, 

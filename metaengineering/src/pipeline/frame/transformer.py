@@ -96,7 +96,7 @@ class FrameTransformers:
         return df
 
     def _apply_fc(self, _df: pd.DataFrame):
-        _df.loc[:, _df.columns] = np.log(_df.loc[:, _df.columns])      
+        _df.loc[:, _df.columns] = np.log2(_df.loc[:, _df.columns])      
         _df = _df - _df.loc['WT'].values.squeeze()
         _df = _df.drop('WT', axis=0)
         return _df

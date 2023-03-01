@@ -113,9 +113,9 @@ class Explainer(BaseRunner):
         tf: TaskFrame,
         X_train: pd.DataFrame, X_test: pd.DataFrame,
     ):
-        X_train_summary = kmeans(self.apply_shap_transform(X_train), 12)
+        X_train_summary = kmeans(self.apply_shap_transform(X_train), 4)
         ex = KernelExplainer(self.get_shap_predict_fn(), X_train_summary, seed=0)
-        selected_feature_names = np.vectorize(lambda x: x.removeprefix("num__"))(self.model.regressor_[:-1].get_feature_names_out())
+        selected_feature_names = np.vectorize(lambda x: x.removeprefix("num__"))(self.model[:-1].get_feature_names_out())
 
         metabolites_of_interests = ['pyr', 'pep', 'dhap', 'all', '3pg;2pg', 'accoa', 'akg', 'e4p', 'f6p', 'g6p;f6p;g6p-B', 'g6p;g6p-B', 'oaa', 'r5p']
 
@@ -166,14 +166,14 @@ class Explainer(BaseRunner):
     
     def apply_shap_transform(self, X):
         _X = X
-        for step in self.model.regressor_.steps[:-1]:
+        for step in self.model.steps[:-1]:
             _X = step[1].transform(_X)
         return _X
     
     def get_shap_predict_fn(self):
         model = self.model
         def shap_predict(X: pd.DataFrame):
-            return model.regressor_.named_steps['regressor'].predict(X)
+            return model.named_steps['regressor'].predict(X)
         return shap_predict
 
     

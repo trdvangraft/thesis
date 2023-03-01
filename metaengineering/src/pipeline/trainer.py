@@ -2,8 +2,10 @@ from typing import Any, Dict, List
 
 from src.pipeline.taskloader import TaskLoader, TaskFrame, TaskLoaderConfig
 from src.settings.strategy import Strategy
+from src.settings.tier import Tier
 
 from src.parsers.cv_parser import to_cv_params, parse_cv_result
+from src.utils.utils import get_project_root
 
 import pandas as pd
 
@@ -20,11 +22,19 @@ class Trainer:
     def do_train_test_split(
         self,
         tf: TaskFrame,
+        strategy: Strategy,
         test_size=0.3,
         shuffle=False,
         stratify=None,
-        strategy: Strategy=Strategy.ALL
     ):
+        
+
+        X_train = pd.read_csv(f'{get_project_root()}/data/preprocessed/x_train_{tf.tier}_{tf.frame_name}_{strategy}.csv')
+        X_test = pd.read_csv(f'{get_project_root()}/data/preprocessed/x_test_{tf.tier}_{tf.frame_name}_{strategy}.csv')
+        y_train = pd.read_csv(f'{get_project_root()}/data/preprocessed/y_train_{tf.tier}_{tf.frame_name}_{strategy}.csv')['metabolite_concentration'].ravel()
+        y_test = pd.read_csv(f'{get_project_root()}/data/preprocessed/y_test_{tf.tier}_{tf.frame_name}_{strategy}.csv')['metabolite_concentration'].ravel()
+        return X_train, X_test, y_train, y_test
+
         df = tf.x.reset_index()
 
         if strategy == strategy.ONE_VS_ALL:
